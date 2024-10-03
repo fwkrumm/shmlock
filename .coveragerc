@@ -1,0 +1,6 @@
+[run]
+source = shmlock
+
+[report]
+omit =
+    tests/*
