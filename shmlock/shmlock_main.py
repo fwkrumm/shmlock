@@ -195,8 +195,9 @@ class ShmLock(ShmModuleBaseLogger):
         start_time = time.perf_counter()
         while (not self._exit_event.is_set()) and \
             (not timeout or time.perf_counter() - start_time < timeout):
-            # enter loop if exit event is not set and either no timeout is set (None or 0/False) or
+            # enter loop if exit event is not set and either no timeout is set (0/False) or
             # the passed time of trying to acquire the lock is smaller than the timeout
+            # None means infinite wait
             try:
                 if self._shm is not None:
                     raise RuntimeError("lock already acquired; "\
