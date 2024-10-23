@@ -174,10 +174,16 @@ class ShmLock(ShmModuleBaseLogger):
         """
         try to acquire lock i.e. shm
 
+        False/None -> no timeout
+        True -> 1 second timeout
+        float -> timeout in seconds
+
         Parameters
         ----------
         timeout : float, optional
-            max timeout for lock acquirement in seconds, by default None
+            max timeout for lock acquirement in seconds. boolean type is also supported,
+            True converts to 1 meaning 1 second timeout and False (or None) to 0 meaning
+            no timeout i.e. lock acquirement is only  tried one time, by default None
 
         Returns
         -------
@@ -208,6 +214,9 @@ class ShmLock(ShmModuleBaseLogger):
                          self._name,
                          self._poll_interval,
                          timeout)
+                if not timeout:
+                    # if no timeout is set -> break loop and return False since acquirement failed
+                    break
                 self._exit_event.wait(self._poll_interval)
                 continue
         # could not acquire within timeout or exit event is set
