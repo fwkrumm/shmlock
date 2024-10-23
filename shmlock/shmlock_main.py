@@ -174,7 +174,8 @@ class ShmLock(ShmModuleBaseLogger):
         """
         try to acquire lock i.e. shm
 
-        False/None -> no timeout
+        None -> wait indefinitely
+        False -> no timeout (try acquire lock one time)
         True -> 1 second timeout
         float -> timeout in seconds
 
@@ -182,8 +183,9 @@ class ShmLock(ShmModuleBaseLogger):
         ----------
         timeout : float, optional
             max timeout for lock acquirement in seconds. boolean type is also supported,
-            True converts to 1 meaning 1 second timeout and False (or None) to 0 meaning
-            no timeout i.e. lock acquirement is only  tried one time, by default None
+            True converts to 1 meaning 1 second timeout and False to 0 meaning
+            no timeout i.e. lock acquirement is only tried one time. None means
+            infinite wait for lock acquirement, by default None
 
         Returns
         -------
@@ -193,7 +195,7 @@ class ShmLock(ShmModuleBaseLogger):
         start_time = time.perf_counter()
         while (not self._exit_event.is_set()) and \
             (not timeout or time.perf_counter() - start_time < timeout):
-            # enter loop if exit event is not set and either no timeout is set (None or 0) or
+            # enter loop if exit event is not set and either no timeout is set (None or 0/False) or
             # the passed time of trying to acquire the lock is smaller than the timeout
             try:
                 if self._shm is not None:
@@ -214,8 +216,9 @@ class ShmLock(ShmModuleBaseLogger):
                          self._name,
                          self._poll_interval,
                          timeout)
-                if not timeout:
-                    # if no timeout is set -> break loop and return False since acquirement failed
+                if timeout is False:
+                    # if timeout is explicitly False
+                    #   -> break loop and return False since acquirement failed
                     break
                 self._exit_event.wait(self._poll_interval)
                 continue
