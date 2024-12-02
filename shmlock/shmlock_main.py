@@ -37,7 +37,7 @@ class ShmLock(ShmModuleBaseLogger):
 
     def __init__(self,
                  lock_name: str,
-                 poll_interval: float = 0.05,
+                 poll_interval: float|int = 0.05,
                  logger: logging.Logger = None,
                  exit_event: multiprocessing.synchronize.Event = None):
         """
@@ -48,7 +48,7 @@ class ShmLock(ShmModuleBaseLogger):
         ----------
         lock_name : str
             name of the lock i.e. the shared memory block
-        poll_interval : float, optional
+        poll_interval : float or int, optional
             time delay in seconds after a failed acquire try after which it will be tried
             again to acquire the lock, by default 0.05s (50ms)
         logger : logging.Logger, optional
@@ -63,22 +63,26 @@ class ShmLock(ShmModuleBaseLogger):
                          # an AttributeError might occur during destructor if init does not
                          # succeed
 
-        super().__init__(logger=logger)
-
         # type checks
-        if not isinstance(poll_interval, float) or poll_interval < 0:
-            raise ValueError("poll_interval must be a float and > 0")
+        if (not isinstance(poll_interval, float) and \
+            not isinstance(poll_interval, int)) or poll_interval <= 0:
+            raise ValueError("poll_interval must be a float or int and > 0")
         if not isinstance(lock_name, str):
             raise ValueError("lock_name must be a string")
         if exit_event is not None and \
             not isinstance(exit_event, multiprocessing.synchronize.Event):
             raise ValueError("exit_event must be a multiprocessing.Event")
 
+        super().__init__(logger=logger)
+
         self._name = lock_name
-        self._poll_interval = poll_interval
+        self._poll_interval = float(poll_interval) # use float type
         self._timeout = None # for __call__
         self._throw = False # for __call__
         self._exit_event = exit_event if exit_event is not None else Event()
+
+        self.debug("lock %s initialized with poll interval %f",
+                   self._name, self._poll_interval)
 
     @contextmanager
     def lock(self, timeout: float = None, throw: bool = False):
@@ -273,27 +277,27 @@ class ShmLock(ShmModuleBaseLogger):
         self.release()
 
     @property
-    def acquired(self):
+    def acquired(self) -> bool:
         """
         check if lock is acquired
         """
         return self._shm is not None
 
     @property
-    def name(self):
+    def name(self) -> str:
         """
         get shared memory name
         """
         return self._name
 
     @property
-    def poll_interval(self):
+    def poll_interval(self) -> float:
         """
         get poll interval
         """
         return self._poll_interval
 
-    def get_exit_event(self):
+    def get_exit_event(self) -> multiprocessing.synchronize.Event:
         """
         get exit event
 

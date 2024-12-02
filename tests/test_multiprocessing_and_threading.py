@@ -257,30 +257,6 @@ class FunctionalTest(unittest.TestCase):
         self.args.timeout = 0.001
         self.execute()
 
-    # @unittest.skip("very slow; do not use poll_interval 0 for threading")
-    def test_zero_poll_interval_as_threads(self):
-        """
-        check arguments with lock function and zero poll interval
-
-        For threading however this is very slow since it results in a while True
-        which with threading blocks the whole process. So if you want to test with this
-        I suggest to limit the number of RUNS (and possible threads). However it is thread safe
-        """
-        global NUM_PROCESSES # pylint: disable=(global-statement)
-        global NUM_RUNS # pylint: disable=(global-statement)
-        num_instances_old = NUM_PROCESSES
-        num_runs_old = NUM_RUNS
-        # otherwise this runs very long and uses much cpu, generally not a good idea
-        NUM_PROCESSES = 3
-        NUM_RUNS = 100
-        log.info("Running test_zero_poll_interval_as_threads (might take some time)")
-        self.use_processes = False
-        self.args.use_lock_function = True
-        self.args.poll_interval = 0.
-        self.execute()
-        NUM_PROCESSES = num_instances_old
-        NUM_RUNS = num_runs_old
-
     # @unittest.skip("skip for now")
     def test_wo_lock_function_timeout_none_as_threads(self):
         """
