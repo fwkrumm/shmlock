@@ -258,6 +258,9 @@ This also seems to slightly increase the performance on POSIX systems.
 Usually, each lock should be released properly.
 Additionally, there is an experimental custom resource tracker; see the following section.
 
+
+Please note that with Python version 3.13, there will be a "track" parameter for shared memory block creation, which can be used to disable tracking. I am aware of this and will use it at some point in the future.
+
 ### Resource Tracking
 
 Since it is crucial that all shared memory blocks are released and the resource tracker on posix systems might cause issues, a custom resource tracker is implemented. Usually however each lock object should release its memory at destruction. To use the (custom) shared memory tracker please follow the following code snippet
