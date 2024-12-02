@@ -92,6 +92,7 @@ if __name__ == "__main__":
 
 
     if USE_RESOURCE_TRACKER_FIX:
+        # remove shared memory names by pattern from resource tracker
         shmlock.remove_shm_from_resource_tracker("shared_memory")
         shmlock.remove_shm_from_resource_tracker("yet_another")
 
@@ -109,6 +110,7 @@ if __name__ == "__main__":
                                                    name=NAME_OF_TEST_SHM_3,
                                                    size=1))
         except FileExistsError:
+            # if the script ended appruptly, the shared memory might still exist.
             LOG.error("Some shms could not be created. will try to close and unlink all ahms. "\
                       "please restart script afterwards.")
             shms = []
@@ -121,19 +123,25 @@ if __name__ == "__main__":
                     # not a problem, just a clean up, some might not exist
                     pass
     else:
+        # second instance -> only append
         shms.append(shared_memory.SharedMemory(name=NAME_OF_TEST_SHM_1))
         shms.append(shared_memory.SharedMemory(name=NAME_OF_TEST_SHM_2))
         shms.append(shared_memory.SharedMemory(name=NAME_OF_TEST_SHM_3))
 
-
+    # blocking loop for first (main) instance
     if shm is not None:
-        LOG.info("Entering loop ...")
+        LOG.info("Entering loop ... hit ctrl+c one time after second instance ran.")
     while shm is not None and len(shms) > 0:
         # block so that another instance can run
         try:
             time.sleep(1)
         except KeyboardInterrupt:
             LOG.info("cleaning up and exiting")
+            if USE_RESOURCE_TRACKER_FIX is True:
+                LOG.info("Since USE_RESOURCE_TRACKER_FIX is True, no errors should be shown.")
+            else:
+                LOG.info("Since USE_RESOURCE_TRACKER_FIX is False, errors/warnings should be "\
+                         "shown if the second instance has run before.")
             shm.close()
             shm.unlink()
             break
