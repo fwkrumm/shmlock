@@ -29,9 +29,11 @@ class InitTest(unittest.TestCase):
         check if init works with default values
         """
         shm_name = str(time.time())
-        obj = shmlock.ShmLock(shm_name)
+        obj = shmlock.ShmLock(shm_name, poll_interval=1)
         self.assertEqual(obj.name, shm_name)
-        self.assertEqual(obj.poll_interval, 0.05)
+        self.assertEqual(obj.poll_interval, 1)
+        # internally should be a float
+        self.assertTrue(isinstance(obj.poll_interval, float))
         del obj
         # shared memory should be deleted thus attaching should fail
         with self.assertRaises(FileNotFoundError):
@@ -65,10 +67,21 @@ class InitTest(unittest.TestCase):
     def test_no_zero_poll(self):
         """
         test if zero poll interval is caught. poll_interval == 0 is strongly discouraged since
-        it will lead to high cpu usage and takes a long time. thus we prevent it explicitly
+        it will lead to high cpu usage and takes a long time. thus we prevent it explicitly.
+        Test for int and float
         """
         with self.assertRaises(ValueError):
             shmlock.ShmLock("some_name", poll_interval=0)
+
+        with self.assertRaises(ValueError):
+            shmlock.ShmLock("some_name", poll_interval=0.0)
+
+    def test_no_negative_poll(self):
+        """
+        test if negative poll interval is caught
+        """
+        with self.assertRaises(ValueError):
+            shmlock.ShmLock("some_name", poll_interval=-1)
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
