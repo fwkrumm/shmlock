@@ -37,7 +37,7 @@ class ShmLock(ShmModuleBaseLogger):
 
     def __init__(self,
                  lock_name: str,
-                 poll_interval: float = 0.05,
+                 poll_interval: float|int|str = 0.05,
                  logger: logging.Logger = None,
                  exit_event: multiprocessing.synchronize.Event = None):
         """
@@ -63,6 +63,7 @@ class ShmLock(ShmModuleBaseLogger):
                          # an AttributeError might occur during destructor if init does not
                          # succeed
 
+        poll_interval = float(poll_interval) # force float conversion
         super().__init__(logger=logger)
 
         # type checks
@@ -273,27 +274,27 @@ class ShmLock(ShmModuleBaseLogger):
         self.release()
 
     @property
-    def acquired(self):
+    def acquired(self) -> bool:
         """
         check if lock is acquired
         """
         return self._shm is not None
 
     @property
-    def name(self):
+    def name(self) -> str:
         """
         get shared memory name
         """
         return self._name
 
     @property
-    def poll_interval(self):
+    def poll_interval(self) -> float:
         """
         get poll interval
         """
         return self._poll_interval
 
-    def get_exit_event(self):
+    def get_exit_event(self) -> multiprocessing.synchronize.Event:
         """
         get exit event
 
