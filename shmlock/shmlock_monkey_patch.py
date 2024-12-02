@@ -69,8 +69,8 @@ def remove_shm_from_resource_tracker(pattern: str, print_warning: bool = True):
                       "This can lead to memory leaks if shared memory is not unlinked manually. "\
                       "Use with caution", stacklevel=2)
 
-    # NOTE that this function is not process-safe. This is because each proces should.
-    #  A check has yet to be implemented
+    # NOTE that this function is not process-safe. This is because each proces should have its
+    # on resource tracker instance. A check has yet to be implemented
     with _THREADING_LOCK:
         global _PATTERN_LIST
         _PATTERN_LIST.append(pattern)
