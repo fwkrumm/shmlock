@@ -4,14 +4,14 @@ This file is designed to test the resource tracker fix.
 How to use this test file:
 USE_RESOURCE_TRACKER_FIX = False
 
-Execute this script. The first instance will block if you hit Ctrl+C (KeyBoardInterrupt).
-Please do not spam the latter (might lead to leaked resources).
+Execute this script. The first instance (script execution) will block if you hit Ctrl+C
+(KeyBoardInterrupt). Please do not spam the latter (might lead to leaked resources).
 
 If you run a single instance and terminate it with Ctrl+C, all is fine.
 The rest of the shared memory will be created and then released (closed and unlinked).
 
 If you run the first instance until it enters the loop and then run the script
- in a second instance, you will get a leaked resource warning at the end:
+ in a second terminal (second instance), you will get a leaked resource warning at the end:
 
 UserWarning: resource_tracker: There appear to be 3 leaked shared_memory objects to
  clean up at shutdown.
@@ -130,7 +130,8 @@ if __name__ == "__main__":
 
     # blocking loop for first (main) instance
     if shm is not None:
-        LOG.info("Entering loop ... hit ctrl+c one time after second instance ran.")
+        LOG.info("Entering loop ... hit ctrl+c one time after second instance (i.e. "\
+                 "run this script in a second terminal) ran.")
     while shm is not None and len(shms) > 0:
         # block so that another instance can run
         try:
