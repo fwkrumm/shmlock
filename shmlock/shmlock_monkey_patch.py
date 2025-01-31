@@ -25,7 +25,6 @@ _PATTERN_LIST = []
 _THREADING_LOCK = threading.RLock()
 
 def remove_shm_from_resource_tracker(pattern: str, print_warning: bool = True):
-    # pylint: disable=all
     """
     Monkey-patch multiprocessing.resource_tracker so SharedMemory will not be tracked
 
@@ -72,23 +71,22 @@ def remove_shm_from_resource_tracker(pattern: str, print_warning: bool = True):
     # NOTE that this function is not process-safe. This is because each proces should have its
     # on resource tracker instance. A check has yet to be implemented
     with _THREADING_LOCK:
-        global _PATTERN_LIST
         _PATTERN_LIST.append(pattern)
 
         def fix_register(name: str, rtype):
             # check if pattern contained in any of the elements within _PATTERN_LIST
-            if any([pattern in name for pattern in _PATTERN_LIST]):
-                return
-            return resource_tracker._resource_tracker.register(name, rtype)
+            if any(pattern in name for pattern in _PATTERN_LIST):
+                return None
+            return resource_tracker._resource_tracker.register(name, rtype) # pylint: disable=protected-access
         resource_tracker.register = fix_register
 
         def fix_unregister(name: str, rtype):
             # check if pattern contained in any of the elements within _PATTERN_LIST
-            if any([pattern in name for pattern in _PATTERN_LIST]):
-                return
-            return resource_tracker._resource_tracker.unregister(name, rtype)
+            if any(pattern in name for pattern in _PATTERN_LIST):
+                return None
+            return resource_tracker._resource_tracker.unregister(name, rtype) # pylint: disable=protected-access
         resource_tracker.unregister = fix_unregister
 
         # if pattern == "", we completely remove the cleanup function for shared memory
-        if not pattern and "shared_memory" in resource_tracker._CLEANUP_FUNCS:
-            del resource_tracker._CLEANUP_FUNCS["shared_memory"]
+        if not pattern and "shared_memory" in resource_tracker._CLEANUP_FUNCS: # pylint: disable=protected-access
+            del resource_tracker._CLEANUP_FUNCS["shared_memory"] # pylint: disable=protected-access
