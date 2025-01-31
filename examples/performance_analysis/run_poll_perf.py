@@ -35,7 +35,7 @@ log = logging.getLogger("LoggerExamplePollIntervalComparison")
 log_buffer = {"info": [], "error": []}
 
 if os.name == "posix":
-    shmlock.remove_shm_from_resource_tracker("")
+    shmlock.remove_shm_from_resource_tracker("", print_warning=False)
     log_buffer.get("info").append("Removed shared memory from resource tracker "\
                                   "for increased performance.\n\n")
 else:
