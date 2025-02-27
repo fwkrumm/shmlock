@@ -233,6 +233,8 @@ This file is very similar to `run_perf.py`; however, it focuses solely on `shmlo
 
 ### Troubleshooting
 
+For Python 3.13 and later versions, there is an additional parameter for `SharedMemory(..., track: bool = True)` which disables the shared memory tracking that causes the following tracking issues. Adding this parameter to the lock is still a pending task.
+
 On POSIX systems, the `resource_tracker` will likely complain that either `shared_memory` instances were not found or spam `KeyErrors`. This issue is known:
 
 https://bugs.python.org/issue38119 (forwarded from https://bugs.python.org/issue39959) originally found at https://stackoverflow.com/questions/62748654/python-3-8-shared-memory-resource-tracker-producing-unexpected-warnings-at-appli
@@ -302,4 +304,3 @@ shmlock.de_init_custom_resource_tracking_without_clean_up()
 - achieve 100% code coverage
 - upload to PyPI
 - implement safeguards to prevent the resource tracker from being shared among processes
-
