@@ -6,7 +6,7 @@
 #   https://google.github.io/styleguide/pylintrc
 #
 #
-# Please note that the file has been slightly modified (max-args and max-positional-args)
+# Please note that the file has been slightly modified (max-args and max-positional-arguments)
 
 [MAIN]
 
@@ -157,6 +157,8 @@ ignored-classes=optparse.Values,thread._local,_thread._local
 # expressions are accepted.
 generated-members=
 
+[DESIGN]
+max-positional-arguments=6
 
 [FORMAT]
 
@@ -164,7 +166,6 @@ generated-members=
 # this value is 5 but the self argument in __init__ functions is counted as parameter
 # which I find wrong. Thus I use a value of 6.
 max-args=6
-max-positional-args=6
 
 # Maximum number of characters on a single line.
 max-line-length=100
