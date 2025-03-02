@@ -304,3 +304,4 @@ shmlock.de_init_custom_resource_tracking_without_clean_up()
 - achieve 100% code coverage
 - upload to PyPI
 - implement safeguards to prevent the resource tracker from being shared among processes
+- test for track parameter for python version >= 3.13

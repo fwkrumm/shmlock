@@ -60,6 +60,9 @@ class ShmLock(ShmModuleBaseLogger):
             if None is provided a new one will be initialized. if event is set to true
             -> acquirement will stop and it will not be possible to acquire a lock until event is
             unset/cleared, by default None
+        track : bool, optional
+            set to True if you want to track the shared memory block. This is only supported
+            for python >= 3.13, by default None
         """
         self._shm = None # make sure to initialize _shm at the beginning since otherwise
                          # an AttributeError might occur during destructor if init does not
@@ -219,6 +222,9 @@ class ShmLock(ShmModuleBaseLogger):
                                        "among different threads. Do not do that. If you must: "\
                                        "Each thread should use its own lock!")
                 if self._track is not None:
+                    # disable unexpected keyword argument warning because track parameter is only
+                    # supported for python >= 3.13. We check that in the constructor however
+                    # pylint still reports it. There might be a better way to handle this?
                     self._shm = shared_memory.SharedMemory(name=self._name,
                                                            create=True,
                                                            size=1,

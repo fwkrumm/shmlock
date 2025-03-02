@@ -4,6 +4,9 @@
 #
 # Its canonical open-source location is:
 #   https://google.github.io/styleguide/pylintrc
+#
+#
+# Please note that the file has been slightly modified (max-args)
 
 [MAIN]
 
@@ -156,6 +159,11 @@ generated-members=
 
 
 [FORMAT]
+
+# Maximum number of arguments for function / method; this is modification; By default
+# this value is 5 but the self argument in __init__ functions is counted as parameter
+# which I find wrong. Thus I use a value of 6.
+max-args=6
 
 # Maximum number of characters on a single line.
 max-line-length=100
