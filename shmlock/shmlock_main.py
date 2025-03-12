@@ -61,8 +61,9 @@ class ShmLock(ShmModuleBaseLogger):
             -> acquirement will stop and it will not be possible to acquire a lock until event is
             unset/cleared, by default None
         track : bool, optional
-            set to True if you want to track the shared memory block. This is only supported
-            for python >= 3.13, by default None
+            set to False if you do want the shared memory block been tracked.
+            This is parameter only supported for python >= 3.13 in SharedMemory
+            class, by default None
         """
         self._shm = None # make sure to initialize _shm at the beginning since otherwise
                          # an AttributeError might occur during destructor if init does not
