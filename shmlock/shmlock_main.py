@@ -1,6 +1,7 @@
 """
 main class of shared memory lock.
 """
+import os
 import time
 import multiprocessing
 import multiprocessing.synchronize
@@ -209,6 +210,29 @@ class ShmLock(ShmModuleBaseLogger):
                                        "Alternatively, you are using the same lock instances "\
                                        "among different threads. Do not do that. If you must: "\
                                        "Each thread should use its own lock!")
+                if os.name == "posix":
+                    # if an instance is terminated e.g. via keyboard interrupt or kill command
+                    # the shared memory might not be cleaned up properly i.e. a zero-sized mmap
+                    # is left on the system. This will cause a FileExistsError when trying to
+                    # create the memory block but also a ValueError when trying to attach to it.
+                    try:
+                        self._shm = shared_memory.SharedMemory(name=self._name)
+                    except FileNotFoundError:
+                        # try to scquire lock
+                        pass
+                    except ValueError:
+                        self.error("For shmlock instance a zeros-ized mmap was found. This "\
+                                   "happens if the program was terminated and the shared "\
+                                   "memory was not cleared properly. The lock will try to "\
+                                   "receover from this by removing the mmap file manually "\
+                                   "from /dev/shm.")
+                        # TODO this needs to be failsafe
+                        os.remove(f"/dev/shm/{self._name}")
+                    finally:
+                        if self._shm is not None:
+                            self._shm.close()
+                            # unlink will be handled by the instance which created the shm
+                            self._shm = None
                 self._shm = shared_memory.SharedMemory(name=self._name, create=True, size=1)
                 add_to_resource_tracker(self._name)
                 self.debug("%s acquired lock %s", PROCESS_NAME, self._name)
