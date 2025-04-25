@@ -210,29 +210,6 @@ class ShmLock(ShmModuleBaseLogger):
                                        "Alternatively, you are using the same lock instances "\
                                        "among different threads. Do not do that. If you must: "\
                                        "Each thread should use its own lock!")
-                if os.name == "posix":
-                    # if an instance is terminated e.g. via keyboard interrupt or kill command
-                    # the shared memory might not be cleaned up properly i.e. a zero-sized mmap
-                    # is left on the system. This will cause a FileExistsError when trying to
-                    # create the memory block but also a ValueError when trying to attach to it.
-                    try:
-                        self._shm = shared_memory.SharedMemory(name=self._name)
-                    except FileNotFoundError:
-                        # try to scquire lock
-                        pass
-                    except ValueError:
-                        self.error("For shmlock instance a zeros-ized mmap was found. This "\
-                                   "happens if the program was terminated and the shared "\
-                                   "memory was not cleared properly. The lock will try to "\
-                                   "receover from this by removing the mmap file manually "\
-                                   "from /dev/shm.")
-                        # TODO this needs to be failsafe
-                        os.remove(f"/dev/shm/{self._name}")
-                    finally:
-                        if self._shm is not None:
-                            self._shm.close()
-                            # unlink will be handled by the instance which created the shm
-                            self._shm = None
                 self._shm = shared_memory.SharedMemory(name=self._name, create=True, size=1)
                 add_to_resource_tracker(self._name)
                 self.debug("%s acquired lock %s", PROCESS_NAME, self._name)
@@ -272,6 +249,18 @@ class ShmLock(ShmModuleBaseLogger):
         """
         if self._shm is not None:
             try:
+                if os.name == "posix":
+                    # if an instance is terminated e.g. via keyboard interrupt or kill command
+                    # the shared memory might not be cleaned up properly i.e. a zero-sized mmap
+                    # is left on the system. This will cause a FileExistsError when trying to
+                    # create the memory block but also a ValueError when trying to attach to it.
+                    file_size = os.stat(f"/dev/shm/{self._name}").st_size
+                    if file_size == 0:
+                        # will be raised as RuntimeEerror
+                        raise ValueError(f"The shred memory block for shared memory {self._name} "\
+                            "is empty. This might be caused by a process termination. "\
+                            "Please check the system for any remaining shared memory "\
+                            "blocks and clean them up manually at path /dev/shm.")
                 self._shm.close()
                 self._shm.unlink()
                 self._shm = None
