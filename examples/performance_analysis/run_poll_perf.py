@@ -75,7 +75,9 @@ def worker_interval(poll_interval: float,
         result = shared_memory.SharedMemory(name=RESULT_SHM_NAME)
 
         shmlock.init_custom_resource_tracking()
-        shm_lock = shmlock.ShmLock(lock_name, poll_interval=poll_interval, track=False if sys.version_info >= (3, 13) else None)
+        shm_lock = shmlock.ShmLock(lock_name,
+                                   poll_interval=poll_interval,
+                                   track=False if sys.version_info >= (3, 13) else None)
 
         time_measure = []
 
