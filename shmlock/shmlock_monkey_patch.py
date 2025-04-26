@@ -12,6 +12,7 @@ For further reading also see
 https://github.com/vllm-project/vllm/issues/5468
 https://github.com/vllm-project/vllm/pull/5512
 """
+import sys
 import os
 import warnings
 import threading
@@ -54,6 +55,13 @@ def remove_shm_from_resource_tracker(pattern: str, print_warning: bool = True):
     print_warning : bool, optional
         whether to print warnings if the function is called on non-posix systems, default is True
     """
+
+    if sys.version_info >= (3, 13):
+        raise RuntimeError("In python 3.13 and above shared memory blocks contain the ''track'' "\
+                           "parameter which can also be used in the ShmLock object. Use "\
+                           "ShmLock(..., track=false) so that shared memory block will not "\
+                           "be tracked.", stacklevel=2)
+
 
     if not isinstance(pattern, str):
         raise ValueError("pattern must be a string")

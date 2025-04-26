@@ -47,8 +47,14 @@ if os.name == "posix":
 
     # otherwise it spams KeyErrors since resource tracker also tracks shm of other processes
     # and complains that it has not been unlinked because it was unlinked by another process
-    shmlock.remove_shm_from_resource_tracker("shm_lock")
-    log_buffer.get("info").append("Removed shared memory from resource tracker.\n\n")
+    if sys.version_info >= (3, 13):
+        # NOTE that this is not necessary for python 3.13 and above since the there is parameter
+        # do deactivate tracking
+        with self.assertRaises(RuntimeError):
+            shmlock.remove_shm_from_resource_tracker("shm_lock")
+    else:
+        shmlock.remove_shm_from_resource_tracker("shm_lock")
+        log_buffer.get("info").append("Removed shared memory from resource tracker.\n\n")
 else:
     log_buffer.get("info").append("Not removing shared memory from resource tracker\n\n")
 
@@ -98,9 +104,11 @@ def worker(arg_collector: ArgumentsCollector):
     start_event.wait() # to synchronize start of all processes
     shm = shared_memory.SharedMemory(name=RESULT_SHM_NAME)
     if poll_interval is not None:
-        obj = shmlock.ShmLock(LOCK_NAME, poll_interval=poll_interval)
+        obj = shmlock.ShmLock(LOCK_NAME,
+                              poll_interval=poll_interval,
+                              track=False if sys.version_info >= (3, 13) else None)
     else:
-        obj = shmlock.ShmLock(LOCK_NAME)
+        obj = shmlock.ShmLock(LOCK_NAME, track=False if sys.version_info >= (3, 13) else None)
 
     time_measurement = []
     failed_acquirements = 0
@@ -157,7 +165,7 @@ class FunctionalTest(unittest.TestCase):
         self.failure_count_queue = multiprocessing.Queue()
         self.time_measurement_queue = multiprocessing.Queue()
 
-        obj = shmlock.ShmLock(LOCK_NAME)
+        obj = shmlock.ShmLock(LOCK_NAME, track=False if sys.version_info >= (3, 13) else None)
         self.assertTrue(obj.acquire(timeout=1), "lock could not be acquired initially i.e. "\
             "it is locked by another process. Tests cannot run.")
 

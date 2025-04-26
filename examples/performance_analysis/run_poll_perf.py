@@ -34,7 +34,7 @@ log = logging.getLogger("LoggerExamplePollIntervalComparison")
 # to prevent log spamming if process spawns
 log_buffer = {"info": [], "error": []}
 
-if os.name == "posix":
+if os.name == "posix" and sys.version_info < (3, 13):
     shmlock.remove_shm_from_resource_tracker("", print_warning=False)
     log_buffer.get("info").append("Removed shared memory from resource tracker "\
                                   "for increased performance.\n\n")
@@ -75,7 +75,7 @@ def worker_interval(poll_interval: float,
         result = shared_memory.SharedMemory(name=RESULT_SHM_NAME)
 
         shmlock.init_custom_resource_tracking()
-        shm_lock = shmlock.ShmLock(lock_name, poll_interval=poll_interval)
+        shm_lock = shmlock.ShmLock(lock_name, poll_interval=poll_interval, track=False if sys.version_info >= (3, 13) else None)
 
         time_measure = []
 
