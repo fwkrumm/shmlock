@@ -211,7 +211,12 @@ class ShmLock(ShmModuleBaseLogger):
                                        "Alternatively, you are using the same lock instances "\
                                        "among different threads. Do not do that. If you must: "\
                                        "Each thread should use its own lock!")
+                # TODO test: write unique lock referene to shared memory that it tries to acquire
                 self._shm = shared_memory.SharedMemory(name=self._name, create=True, size=1)
+                # TODO test: write unique lock reference to shared memory that it has acquired lock
+                # then at keyboard interrupt and final clean up I only have to check that IF they
+                # block exists, if ANY OTHER LOCK has actually acquired the lock.
+                # maybe shareable list? and at release the lock removes its unique identifier?
                 add_to_resource_tracker(self._name)
                 self.debug("%s acquired lock %s", PROCESS_NAME, self._name)
                 return True
@@ -229,6 +234,48 @@ class ShmLock(ShmModuleBaseLogger):
                     break
                 self._exit_event.wait(self._poll_interval)
                 continue
+            except KeyboardInterrupt as err:
+                for _ in range(3):
+                    self.error("KeyboardInterrupt: process %s interrupted while trying to acquire lock %s. shared memory is %s",
+                            PROCESS_NAME,
+                            self._name,
+                            self._shm)
+                try:
+                    try:
+                        # however this is DANGEROUS since the lock might be acquired by
+                        # another process! maybe add parameter "clean up at keyboard interrupt"?
+                        # MAYBE:
+                        # create a ref counting shared memory block in which each lock instance
+                        # write the info IF it has acquired a lock? that way I could verify if
+                        # any other lock has written its data to the file? difficult however
+                        # since it has to be synchronized so basically I would need ANOTHER
+                        # lock for that. So I would need a lock for the locK:
+                        shm = shared_memory.SharedMemory(name=self._name)
+                        shm.close()
+                        shm.unlink()
+                        self.error("KeyboardInterrupt: shared memory %s has been cleaned up. "\
+                            "This might be caused by a process termination. "\
+                            "Please check the system for any remaining shared memory "\
+                            "blocks and clean them up manually at path /dev/shm.",
+                            self._name)
+                        self._shm = None
+                    except ValueError:
+                        self.error("ValueError: shared memory %s is not available. "\
+                            "This might be caused by a process termination. "\
+                            "Please check the system for any remaining shared memory "\
+                            "blocks and clean them up manually at path /dev/shm.",
+                            self._name)
+                        os.remove(f"/dev/shm/{self._name}")
+                except FileNotFoundError:
+                    self.error("FileNotFoundError: shared memory %s is not available. "\
+                        "This might be caused by a process termination. "\
+                        "Please check the system for any remaining shared memory "\
+                        "blocks and clean them up manually at path /dev/shm.",
+                        self._name)
+                    pass
+                # seemingly at keyboard interrupt the shared memory is created but NOT yet returned
+                # so shared memory is None but the block created! so
+                raise KeyboardInterrupt("ctrl+c") from err
         # could not acquire within timeout or exit event is set
         return False
 
