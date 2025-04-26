@@ -250,15 +250,19 @@ class ShmLock(ShmModuleBaseLogger):
         """
         if self._shm is not None:
             try:
-                if platform.system == "Linux":
+                if platform.system() == "Linux":
                     # if an instance is terminated e.g. via keyboard interrupt or kill command
                     # the shared memory might not be cleaned up properly i.e. a zero-sized mmap
                     # is left on the system. This will cause a FileExistsError when trying to
                     # create the memory block but also a ValueError when trying to attach to it.
                     # NOTE this might also be the case for macos systems but this is not tested
+
+                    # NOTE that this is not yet ready for merge since if the path does not exist
+                    # the shared memory block will not be released. This needs to become more fail
+                    # safe!
                     file_size = os.stat(f"/dev/shm/{self._name}").st_size
                     if file_size == 0:
-                        # will be raised as RuntimeEerror
+                        # will be raised as RuntimeError
                         raise ValueError(f"The shred memory block for shared memory {self._name} "\
                             "is empty. This might be caused by a process termination. "\
                             "Please check the system for any remaining shared memory "\
