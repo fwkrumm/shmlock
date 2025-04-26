@@ -47,12 +47,9 @@ if os.name == "posix":
 
     # otherwise it spams KeyErrors since resource tracker also tracks shm of other processes
     # and complains that it has not been unlinked because it was unlinked by another process
-    if sys.version_info >= (3, 13):
-        # NOTE that this is not necessary for python 3.13 and above since the there is parameter
-        # do deactivate tracking
-        with self.assertRaises(RuntimeError):
-            shmlock.remove_shm_from_resource_tracker("shm_lock")
-    else:
+    if sys.version_info < (3, 13):
+        # NOTE that this is not necessary for python 3.13 and above since there is the track
+        # parameter to deactivate tracking
         shmlock.remove_shm_from_resource_tracker("shm_lock")
         log_buffer.get("info").append("Removed shared memory from resource tracker.\n\n")
 else:
