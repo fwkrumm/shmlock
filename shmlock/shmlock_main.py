@@ -2,6 +2,7 @@
 main class of shared memory lock.
 """
 import os
+import platform
 import time
 import multiprocessing
 import multiprocessing.synchronize
@@ -249,11 +250,12 @@ class ShmLock(ShmModuleBaseLogger):
         """
         if self._shm is not None:
             try:
-                if os.name == "posix":
+                if platform.system == "Linux":
                     # if an instance is terminated e.g. via keyboard interrupt or kill command
                     # the shared memory might not be cleaned up properly i.e. a zero-sized mmap
                     # is left on the system. This will cause a FileExistsError when trying to
                     # create the memory block but also a ValueError when trying to attach to it.
+                    # NOTE this might also be the case for macos systems but this is not tested
                     file_size = os.stat(f"/dev/shm/{self._name}").st_size
                     if file_size == 0:
                         # will be raised as RuntimeEerror
