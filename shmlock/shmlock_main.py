@@ -31,6 +31,56 @@ from shmlock.shmlock_resource_tracking import PROCESS_NAME
 
 from shmlock.shmlock_base_logger import ShmModuleBaseLogger
 
+LOCK_SHM_SIZE = 16 # size of the shared memory block in bytes to store uuid
+
+
+# to own class
+class ShmUuid:
+    """
+    data class to store the uuid of the lock
+    """
+
+    def __init__(self):
+        self.uuid_ = uuid.uuid4()
+        self.uuid_bytes = self.uuid_.bytes
+        self.uuid_str = str(self.uuid_)
+
+    def __repr__(self):
+        return f"ShmUuid(uuid={self.uuid_})"
+
+    @staticmethod
+    def byte_to_string(byte_repr: bytes) -> str:
+        """
+        convert byte representation of uuid to string representation
+
+        Parameters
+        ----------
+        byte_repr : bytes
+            byte representation of uuid
+
+        Returns
+        -------
+        str
+            string representation of uuid
+        """
+        return str(uuid.UUID(bytes=byte_repr))
+
+    def string_to_bytes(self, uuid_str: str) -> bytes:
+        """
+        convert string representation of uuid to byte representation
+
+        Parameters
+        ----------
+        uuid_str : str
+            string representation of uuid
+
+        Returns
+        -------
+        bytes
+            byte representation of uuid
+        """
+        return uuid.UUID(uuid_str).bytes
+
 class ShmLock(ShmModuleBaseLogger):
 
     """
@@ -86,7 +136,7 @@ class ShmLock(ShmModuleBaseLogger):
         self._throw = False # for __call__
         self._exit_event = exit_event if exit_event is not None else Event()
 
-        self._uuid = str(uuid.uuid4()) # unique identifier for the lock
+        self._uuid = ShmUuid() # unique identifier for the lock
 
         self.debug("lock %s initialized with poll interval %f",
                    self, self._poll_interval)
@@ -228,7 +278,10 @@ class ShmLock(ShmModuleBaseLogger):
                                        "Alternatively, you are using the same lock instances "\
                                        "among different threads. Do not do that. If you must: "\
                                        "Each thread should use its own lock!")
-                self._shm = shared_memory.SharedMemory(name=self._name, create=True, size=1)
+                self._shm = shared_memory.SharedMemory(name=self._name,
+                                                       create=True,
+                                                       size=LOCK_SHM_SIZE)
+                self._shm.buf[:LOCK_SHM_SIZE] = self._uuid.uuid_bytes
                 add_to_resource_tracker(self._name)
                 self.debug("%s acquired lock %s", PROCESS_NAME, self)
                 return True
@@ -247,6 +300,10 @@ class ShmLock(ShmModuleBaseLogger):
                 self._exit_event.wait(self._poll_interval)
                 continue
             except KeyboardInterrupt as err:
+                # special treatment for keyboard interrupt since this might lead to a
+                # dangling shared memory block. This is only the case if the process is
+                # interrupted somewhere within the shared memory creation process within the
+                # multiprocessing library.
                 self.warning("KeyboardInterrupt: process %s interrupted while trying to "\
                            "acquire lock %s. shared memory variable is %s",
                            PROCESS_NAME,
@@ -254,14 +311,23 @@ class ShmLock(ShmModuleBaseLogger):
                            self._shm)
                 try:
                     # check if shared memory is attachable
-                    # NOTE how check that not ANOTHER process as acquired the lock?
                     shm = shared_memory.SharedMemory(name=self._name)
                     # if we arrive here: seemingly has the shared memory block created by this
                     # lock instance.
-                    shm.close()
-                    shm.unlink()
-                    self.info("KeyboardInterrupt: shared memory %s (uuid %s) has been cleaned up.",
-                              self)
+
+                    # NOTE: shared memory is after creation(!) not filled with the uuid data in
+                    # the same step. so it MIGHT be possible that the shm block has been created
+                    # but not filled with the uuid data so it would be empty.
+
+                    # check if buffer is empty:
+                    if shm.buf[:LOCK_SHM_SIZE] == b'\x00' * LOCK_SHM_SIZE or \
+                        shm.buf[:LOCK_SHM_SIZE] == self._uuid.uuid_bytes:
+                        # so shared memory block is created but empty or this lock as acquired
+                        # the shared memory block. In this case we can clean it up
+                        shm.close()
+                        shm.unlink()
+                        self.info("KeyboardInterrupt: shared memory %s (uuid %s) has been cleaned up.",
+                                self)
                 except ValueError as err2:
                     # happened only on linux systems so far
                     self.error("%s: shared memory %s is not available. "\
@@ -271,8 +337,12 @@ class ShmLock(ShmModuleBaseLogger):
                         err2,
                         self)
                     raise ValueError(f"Shared memory {self}") from err2
-                # raise keyboardinterrupt to stop the process
+                except FileNotFoundError:
+                    # shared memory does not exist, so keyboard interrupt did not yield to
+                    # any undesired behavior. will lead to raise of KeyboardInterrupt
+                    pass
                 self._shm = None
+                # raise keyboardinterrupt to stop the process
                 raise KeyboardInterrupt("ctrl+c") from err
         # could not acquire within timeout or exit event is set
         return False
@@ -356,3 +426,30 @@ class ShmLock(ShmModuleBaseLogger):
             set this to stop the lock acquirement
         """
         return self._exit_event
+
+    def get_uuid_of_locking_lock(self) -> str | None:
+        """
+        get uuid of the locking lock
+
+        Parameters
+        ----------
+        name : str
+            name of the lock
+
+        Returns
+        -------
+        str
+            uuid of the locking lock
+        None
+            if the lock does not exist or is not acquired; NOTE that if you call this in the
+            mean time the lock might be released by another process and you get None
+        """
+        shm = None
+        try:
+            shm = shared_memory.SharedMemory(name=self._name)
+            return ShmUuid.byte_to_string(shm.buf[:LOCK_SHM_SIZE])
+        except FileNotFoundError:
+            return None
+        finally:
+            if shm is not None:
+                shm.close()
