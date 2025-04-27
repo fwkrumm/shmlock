@@ -12,7 +12,7 @@ from shmlock import shmlock_resource_tracking
 # disable warnings for this test
 shmlock.enable_disable_warnings(False)
 
-LOCK_NAME = "test_resource_tracker_lock_shm"
+LOCK_NAME = "test_resource_tracker"
 
 logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger("TestLogger")

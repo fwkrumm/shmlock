@@ -50,7 +50,8 @@ class ShmLock(ShmModuleBaseLogger):
         Parameters
         ----------
         lock_name : str
-            name of the lock i.e. the shared memory block
+            name of the lock i.e. the shared memory block. Note that due to reference logging
+            also a shared memory block with the lock_name + "_list" will be created.
         poll_interval : float or int, optional
             time delay in seconds after a failed acquire try after which it will be tried
             again to acquire the lock, by default 0.05s (50ms)
@@ -77,6 +78,9 @@ class ShmLock(ShmModuleBaseLogger):
         if exit_event is not None and \
             not isinstance(exit_event, multiprocessing.synchronize.Event):
             raise ValueError("exit_event must be a multiprocessing.Event")
+
+        if not lock_name:
+            raise ValueError("lock_name must not be empty"
 
         super().__init__(logger=logger)
 
@@ -268,18 +272,18 @@ class ShmLock(ShmModuleBaseLogger):
                     self.info("KeyboardInterrupt: shared memory %s (uuid %s) has been cleaned up.",
                               self._name,
                               self._uuid)
-                except ValueError as err:
+                except ValueError as err2:
                     self.error("%s: shared memory %s is not available. "\
                         "This might be caused by a process termination. "\
                         "Please check the system for any remaining shared memory "\
                         "blocks and clean them up manually at path /dev/shm.",
-                        err,
+                        err2,
                         self._name)
                     os.remove(f"/dev/shm/{self._name}") # TODO more checks; size should be zero
-                                                        # and file should exist
-                except FileNotFoundError as err:
+                                                        # and file should exist; check if
+                except FileNotFoundError as err2:
                     raise RuntimeError("Reference list contained name of lock but shared "\
-                                       "memory was not created. Should not happen!") from err
+                                       "memory was not created. Should not happen!") from err2
                 # raise keyboardinterrupt to stop the process
                 self._shm = None
                 raise KeyboardInterrupt("ctrl+c") from err
