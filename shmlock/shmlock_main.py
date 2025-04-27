@@ -304,30 +304,35 @@ class ShmLock(ShmModuleBaseLogger):
                 # dangling shared memory block. This is only the case if the process is
                 # interrupted somewhere within the shared memory creation process within the
                 # multiprocessing library.
-                self.warning("KeyboardInterrupt: process %s interrupted while trying to "\
-                           "acquire lock %s. shared memory variable is %s",
+                self.error("KeyboardInterrupt: process %s interrupted while trying to "\
+                           "acquire lock %s. This might lead to leaking resources. "\
+                           "shared memory variable is %s",
                            PROCESS_NAME,
                            self,
                            self._shm)
                 try:
-                    # check if shared memory is attachable
-                    shm = shared_memory.SharedMemory(name=self._name)
-                    # if we arrive here: seemingly has the shared memory block created by this
-                    # lock instance.
+                    if self._shm is None and os.name == "posix":
+                        # check if shared memory is attachable
+                        shm = shared_memory.SharedMemory(name=self._name)
+                        # if we arrive here: seemingly has the shared memory block created by this
+                        # lock instance.
 
-                    # NOTE: shared memory is after creation(!) not filled with the uuid data in
-                    # the same step. so it MIGHT be possible that the shm block has been created
-                    # but not filled with the uuid data so it would be empty.
+                        # NOTE: shared memory is after creation(!) not filled with the uuid data in
+                        # the same step. so it MIGHT be possible that the shm block has been
+                        # created but not filled with the uuid data so it would be empty.
 
-                    # check if buffer is empty:
-                    if shm.buf[:LOCK_SHM_SIZE] == b'\x00' * LOCK_SHM_SIZE or \
-                        shm.buf[:LOCK_SHM_SIZE] == self._uuid.uuid_bytes:
-                        # so shared memory block is created but empty or this lock as acquired
-                        # the shared memory block. In this case we can clean it up
-                        shm.close()
-                        shm.unlink()
-                        self.info("KeyboardInterrupt: shared memory %s (uuid %s) has been cleaned up.",
-                                self)
+                        # check if buffer is empty:
+                        if shm.buf[:LOCK_SHM_SIZE] == b"\x00" * LOCK_SHM_SIZE or \
+                            shm.buf[:LOCK_SHM_SIZE] == self._uuid.uuid_bytes:
+                            # so shared memory block is created but empty or this lock as acquired
+                            # the shared memory block. In this case we can clean it up
+                            shm.close()
+                            shm.unlink()
+                            self.info("KeyboardInterrupt: shared memory %s has been cleaned up.",
+                                    self)
+                        else:
+                            shm.close()
+                    # else will be released during release function
                 except ValueError as err2:
                     # happened only on linux systems so far
                     self.error("%s: shared memory %s is not available. "\
