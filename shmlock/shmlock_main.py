@@ -2,11 +2,12 @@
 main class of shared memory lock.
 """
 import os
-import platform
+import uuid
 import time
 import multiprocessing
 import multiprocessing.synchronize
 from multiprocessing import shared_memory
+from multiprocessing.shared_memory import ShareableList
 from multiprocessing import Event
 from contextlib import contextmanager
 import logging
@@ -65,6 +66,8 @@ class ShmLock(ShmModuleBaseLogger):
                          # an AttributeError might occur during destructor if init does not
                          # succeed
 
+        self._shm_ref = None
+
         # type checks
         if (not isinstance(poll_interval, float) and \
             not isinstance(poll_interval, int)) or poll_interval <= 0:
@@ -83,8 +86,17 @@ class ShmLock(ShmModuleBaseLogger):
         self._throw = False # for __call__
         self._exit_event = exit_event if exit_event is not None else Event()
 
-        self.debug("lock %s initialized with poll interval %f",
-                   self._name, self._poll_interval)
+        try:
+            self._shm_ref = ShareableList([255 * " "], name=self._name + "_list")
+        except FileExistsError:
+            self._shm_ref = ShareableList(name=self._name + "_list")
+
+        assert self._shm_ref is not None, "shm_ref is None. This should not happen!"
+
+        self._uuid = str(uuid.uuid4()) # unique identifier for the lock
+
+        self.debug("lock %s (id %s) initialized with poll interval %f",
+                   self._name, self._uuid, self._poll_interval)
 
     @contextmanager
     def lock(self, timeout: float = None, throw: bool = False):
@@ -213,6 +225,7 @@ class ShmLock(ShmModuleBaseLogger):
                                        "Each thread should use its own lock!")
                 # TODO test: write unique lock referene to shared memory that it tries to acquire
                 self._shm = shared_memory.SharedMemory(name=self._name, create=True, size=1)
+                self._shm_ref[0] = self._uuid
                 # TODO test: write unique lock reference to shared memory that it has acquired lock
                 # then at keyboard interrupt and final clean up I only have to check that IF they
                 # block exists, if ANY OTHER LOCK has actually acquired the lock.
@@ -235,46 +248,40 @@ class ShmLock(ShmModuleBaseLogger):
                 self._exit_event.wait(self._poll_interval)
                 continue
             except KeyboardInterrupt as err:
-                for _ in range(3):
-                    self.error("KeyboardInterrupt: process %s interrupted while trying to acquire lock %s. shared memory is %s",
-                            PROCESS_NAME,
-                            self._name,
-                            self._shm)
+                self.error("KeyboardInterrupt: process %s interrupted while trying to "\
+                           "acquire lock %s and identifier %s. shared memory variable is %s",
+                           PROCESS_NAME,
+                           self._name,
+                           self._uuid,
+                           self._shm)
+                if self._shm_ref[0] != "" and self._shm_ref[0] != self._uuid:
+                    self.debug("KeyboardInterrupt: another instance has acquired the lock. No "\
+                               "clean up within this instance (uuid %s) necessary.", self._uuid)
+                    break
                 try:
-                    try:
-                        # however this is DANGEROUS since the lock might be acquired by
-                        # another process! maybe add parameter "clean up at keyboard interrupt"?
-                        # MAYBE:
-                        # create a ref counting shared memory block in which each lock instance
-                        # write the info IF it has acquired a lock? that way I could verify if
-                        # any other lock has written its data to the file? difficult however
-                        # since it has to be synchronized so basically I would need ANOTHER
-                        # lock for that. So I would need a lock for the locK:
-                        shm = shared_memory.SharedMemory(name=self._name)
-                        shm.close()
-                        shm.unlink()
-                        self.error("KeyboardInterrupt: shared memory %s has been cleaned up. "\
-                            "This might be caused by a process termination. "\
-                            "Please check the system for any remaining shared memory "\
-                            "blocks and clean them up manually at path /dev/shm.",
-                            self._name)
-                        self._shm = None
-                    except ValueError:
-                        self.error("ValueError: shared memory %s is not available. "\
-                            "This might be caused by a process termination. "\
-                            "Please check the system for any remaining shared memory "\
-                            "blocks and clean them up manually at path /dev/shm.",
-                            self._name)
-                        os.remove(f"/dev/shm/{self._name}")
-                except FileNotFoundError:
-                    self.error("FileNotFoundError: shared memory %s is not available. "\
+                    # check if shared memory is attachable
+                    shm = shared_memory.SharedMemory(name=self._name)
+                    # if we arrive here: seemingly has the shared memory block created by this
+                    # lock instance.
+                    shm.close()
+                    shm.unlink()
+                    self.info("KeyboardInterrupt: shared memory %s (uuid %s) has been cleaned up.",
+                              self._name,
+                              self._uuid)
+                except ValueError as err:
+                    self.error("%s: shared memory %s is not available. "\
                         "This might be caused by a process termination. "\
                         "Please check the system for any remaining shared memory "\
                         "blocks and clean them up manually at path /dev/shm.",
+                        err,
                         self._name)
-                    pass
-                # seemingly at keyboard interrupt the shared memory is created but NOT yet returned
-                # so shared memory is None but the block created! so
+                    os.remove(f"/dev/shm/{self._name}") # TODO more checks; size should be zero
+                                                        # and file should exist
+                except FileNotFoundError as err:
+                    raise RuntimeError("Reference list contained name of lock but shared "\
+                                       "memory was not created. Should not happen!") from err
+                # raise keyboardinterrupt to stop the process
+                self._shm = None
                 raise KeyboardInterrupt("ctrl+c") from err
         # could not acquire within timeout or exit event is set
         return False
@@ -296,24 +303,8 @@ class ShmLock(ShmModuleBaseLogger):
             if the lock could not be released properly
         """
         if self._shm is not None:
+            self._shm_ref[0] = ""
             try:
-                if platform.system() == "Linux":
-                    # if an instance is terminated e.g. via keyboard interrupt or kill command
-                    # the shared memory might not be cleaned up properly i.e. a zero-sized mmap
-                    # is left on the system. This will cause a FileExistsError when trying to
-                    # create the memory block but also a ValueError when trying to attach to it.
-                    # NOTE this might also be the case for macos systems but this is not tested
-
-                    # NOTE that this is not yet ready for merge since if the path does not exist
-                    # the shared memory block will not be released. This needs to become more fail
-                    # safe!
-                    file_size = os.stat(f"/dev/shm/{self._name}").st_size
-                    if file_size == 0:
-                        # will be raised as RuntimeError
-                        raise ValueError(f"The shred memory block for shared memory {self._name} "\
-                            "is empty. This might be caused by a process termination. "\
-                            "Please check the system for any remaining shared memory "\
-                            "blocks and clean them up manually at path /dev/shm.")
                 self._shm.close()
                 self._shm.unlink()
                 self._shm = None
