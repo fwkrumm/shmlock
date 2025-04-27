@@ -7,7 +7,6 @@ import time
 import multiprocessing
 import multiprocessing.synchronize
 from multiprocessing import shared_memory
-from multiprocessing.shared_memory import ShareableList
 from multiprocessing import Event
 from contextlib import contextmanager
 import logging
@@ -50,8 +49,7 @@ class ShmLock(ShmModuleBaseLogger):
         Parameters
         ----------
         lock_name : str
-            name of the lock i.e. the shared memory block. Note that due to reference logging
-            also a shared memory block with the lock_name + "_list" will be created.
+            name of the lock i.e. the shared memory block.
         poll_interval : float or int, optional
             time delay in seconds after a failed acquire try after which it will be tried
             again to acquire the lock, by default 0.05s (50ms)
@@ -66,8 +64,6 @@ class ShmLock(ShmModuleBaseLogger):
         self._shm = None # make sure to initialize _shm at the beginning since otherwise
                          # an AttributeError might occur during destructor if init does not
                          # succeed
-
-        self._shm_ref = None
 
         # type checks
         if (not isinstance(poll_interval, float) and \
@@ -90,17 +86,22 @@ class ShmLock(ShmModuleBaseLogger):
         self._throw = False # for __call__
         self._exit_event = exit_event if exit_event is not None else Event()
 
-        try:
-            self._shm_ref = ShareableList([255 * " "], name=self._name + "_list")
-        except FileExistsError:
-            self._shm_ref = ShareableList(name=self._name + "_list")
-
-        assert self._shm_ref is not None, "shm_ref is None. This should not happen!"
-
         self._uuid = str(uuid.uuid4()) # unique identifier for the lock
 
-        self.debug("lock %s (id %s) initialized with poll interval %f",
-                   self._name, self._uuid, self._poll_interval)
+        self.debug("lock %s initialized with poll interval %f",
+                   self, self._poll_interval)
+
+    def __repr__(self):
+        """
+        representation of the lock class
+
+        Returns
+        -------
+        str
+            representation of the lock class
+        """
+        return f"ShmLock(name={self._name}, uuid={self._uuid}, "\
+               f"poll_interval={self._poll_interval}, exit_event={self._exit_event})"
 
     @contextmanager
     def lock(self, timeout: float = None, throw: bool = False):
@@ -132,7 +133,7 @@ class ShmLock(ShmModuleBaseLogger):
         finally:
             self.release()
         if throw:
-            raise TimeoutError(f"Could not acquire lock {self._name}")
+            raise TimeoutError(f"Could not acquire lock {self}")
         yield False
 
 
@@ -154,7 +155,7 @@ class ShmLock(ShmModuleBaseLogger):
         if self.acquire(timeout=self._timeout):
             return True
         if self._throw:
-            raise TimeoutError(f"Could not acquire lock {self._name}")
+            raise TimeoutError(f"Could not acquire lock {self}")
         return False
 
     def __call__(self, timeout=None, throw=False):
@@ -227,22 +228,16 @@ class ShmLock(ShmModuleBaseLogger):
                                        "Alternatively, you are using the same lock instances "\
                                        "among different threads. Do not do that. If you must: "\
                                        "Each thread should use its own lock!")
-                # TODO test: write unique lock referene to shared memory that it tries to acquire
                 self._shm = shared_memory.SharedMemory(name=self._name, create=True, size=1)
-                self._shm_ref[0] = self._uuid
-                # TODO test: write unique lock reference to shared memory that it has acquired lock
-                # then at keyboard interrupt and final clean up I only have to check that IF they
-                # block exists, if ANY OTHER LOCK has actually acquired the lock.
-                # maybe shareable list? and at release the lock removes its unique identifier?
                 add_to_resource_tracker(self._name)
-                self.debug("%s acquired lock %s", PROCESS_NAME, self._name)
+                self.debug("%s acquired lock %s", PROCESS_NAME, self)
                 return True
             except FileExistsError:
                 # if it returns True -> exit event is set and while loop will break
                 self.debug("%s could not acquire lock %s; trying again after %f seconds; "\
                          "timeout[s] is %s",
                          PROCESS_NAME,
-                         self._name,
+                         self,
                          self._poll_interval,
                          timeout)
                 if timeout is False:
@@ -252,38 +247,30 @@ class ShmLock(ShmModuleBaseLogger):
                 self._exit_event.wait(self._poll_interval)
                 continue
             except KeyboardInterrupt as err:
-                self.error("KeyboardInterrupt: process %s interrupted while trying to "\
-                           "acquire lock %s and identifier %s. shared memory variable is %s",
+                self.warning("KeyboardInterrupt: process %s interrupted while trying to "\
+                           "acquire lock %s. shared memory variable is %s",
                            PROCESS_NAME,
-                           self._name,
-                           self._uuid,
+                           self,
                            self._shm)
-                if self._shm_ref[0] != "" and self._shm_ref[0] != self._uuid:
-                    self.debug("KeyboardInterrupt: another instance has acquired the lock. No "\
-                               "clean up within this instance (uuid %s) necessary.", self._uuid)
-                    break
                 try:
                     # check if shared memory is attachable
+                    # NOTE how check that not ANOTHER process as acquired the lock?
                     shm = shared_memory.SharedMemory(name=self._name)
                     # if we arrive here: seemingly has the shared memory block created by this
                     # lock instance.
                     shm.close()
                     shm.unlink()
                     self.info("KeyboardInterrupt: shared memory %s (uuid %s) has been cleaned up.",
-                              self._name,
-                              self._uuid)
+                              self)
                 except ValueError as err2:
+                    # happened only on linux systems so far
                     self.error("%s: shared memory %s is not available. "\
                         "This might be caused by a process termination. "\
                         "Please check the system for any remaining shared memory "\
-                        "blocks and clean them up manually at path /dev/shm.",
+                        "blocks and on Linux clean them up manually at path /dev/shm.",
                         err2,
-                        self._name)
-                    os.remove(f"/dev/shm/{self._name}") # TODO more checks; size should be zero
-                                                        # and file should exist; check if
-                except FileNotFoundError as err2:
-                    raise RuntimeError("Reference list contained name of lock but shared "\
-                                       "memory was not created. Should not happen!") from err2
+                        self)
+                    raise ValueError(f"Shared memory {self}") from err2
                 # raise keyboardinterrupt to stop the process
                 self._shm = None
                 raise KeyboardInterrupt("ctrl+c") from err
@@ -307,13 +294,12 @@ class ShmLock(ShmModuleBaseLogger):
             if the lock could not be released properly
         """
         if self._shm is not None:
-            self._shm_ref[0] = ""
             try:
                 self._shm.close()
                 self._shm.unlink()
                 self._shm = None
                 remove_from_resource_tracker(self._name)
-                self.debug("%s released lock %s", PROCESS_NAME, self._name)
+                self.debug("%s released lock %s", PROCESS_NAME, self)
                 return True
             except FileNotFoundError:
                 # can happen if the lock is acquired and the resource tracker cleans it up
@@ -322,12 +308,12 @@ class ShmLock(ShmModuleBaseLogger):
                 self.debug("lock %s has been released already. This might happen on "\
                            "posix systems if the resource tracker was used to clean "\
                            "up while the lock was acquired.",
-                           self._name)
+                           self)
                 remove_from_resource_tracker(self._name)
             except Exception as err: # pylint: disable=(broad-exception-caught)
                 # other errors will raised as RuntimeError
                 raise RuntimeError(f"process {PROCESS_NAME} could not release lock "\
-                    f"{self._name}. This might result in a leaking resource! "\
+                    f"{self}. This might result in a leaking resource! "\
                     f"Error was {err}") from err
         return False
 
