@@ -80,7 +80,7 @@ class ShmLock(ShmModuleBaseLogger):
             raise ValueError("exit_event must be a multiprocessing.Event")
 
         if not lock_name:
-            raise ValueError("lock_name must not be empty"
+            raise ValueError("lock_name must not be empty")
 
         super().__init__(logger=logger)
 
