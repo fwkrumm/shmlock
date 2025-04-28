@@ -65,7 +65,8 @@ class ShmUuid:
         """
         return str(uuid.UUID(bytes=byte_repr))
 
-    def string_to_bytes(self, uuid_str: str) -> bytes:
+    @staticmethod
+    def string_to_bytes(uuid_str: str) -> bytes:
         """
         convert string representation of uuid to byte representation
 
@@ -321,10 +322,10 @@ class ShmLock(ShmModuleBaseLogger):
                         # the same step. so it MIGHT be possible that the shm block has been
                         # created but not filled with the uuid data so it would be empty.
 
-                        # check if buffer is empty:
+                        # check if buffer is empty or contains the uuid of this lock instance:
                         if shm.buf[:LOCK_SHM_SIZE] == b"\x00" * LOCK_SHM_SIZE or \
                             shm.buf[:LOCK_SHM_SIZE] == self._uuid.uuid_bytes:
-                            # so shared memory block is created but empty or this lock as acquired
+                            # shared memory block is created but empty or this lock as acquired
                             # the shared memory block. In this case we can clean it up
                             shm.close()
                             shm.unlink()
