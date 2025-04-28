@@ -330,7 +330,7 @@ class ShmLock(ShmModuleBaseLogger):
                             shm.close()
                             shm.unlink()
                             self.info("KeyboardInterrupt: shared memory %s has been cleaned up.",
-                                    self)
+                                      self)
                         else:
                             shm.close()
                     # else will be released during release function
