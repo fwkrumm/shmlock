@@ -4,7 +4,6 @@ main class of shared memory lock.
 If possible never terminate this process using ctrl+c or similar. This can lead to dangling
 shared memory blocks. Best practice is to use the exit event to stop the lock from acquirement.
 """
-import os
 import uuid
 import time
 import multiprocessing
@@ -23,6 +22,7 @@ __all__ = ["ShmLock",
            ]
 
 # reveal functions for resource tracking adjustments
+import  shmlock.shmlock_exceptions as exceptions
 from shmlock.shmlock_monkey_patch import remove_shm_from_resource_tracker
 from shmlock.shmlock_resource_tracking import init_custom_resource_tracking
 from shmlock.shmlock_resource_tracking import de_init_custom_resource_tracking
@@ -39,7 +39,7 @@ KEYBOARD_INTERRUPT_QUERY_NUMBER = 3 # at keyboard interrupt it will be checked i
                                    # dangling shared memory block. This will be done a specific
                                    # number of times. Not a perfect solution
 
-# todo: to own class
+# to-do: to own class
 class ShmUuid:
     """
     data class to store the uuid of the lock
@@ -124,15 +124,15 @@ class ShmLock(ShmModuleBaseLogger):
         # type checks
         if (not isinstance(poll_interval, float) and \
             not isinstance(poll_interval, int)) or poll_interval <= 0:
-            raise ValueError("poll_interval must be a float or int and > 0")
+            raise exceptions.ShmLockValueError("poll_interval must be a float or int and > 0")
         if not isinstance(lock_name, str):
-            raise ValueError("lock_name must be a string")
+            raise exceptions.ShmLockValueError("lock_name must be a string")
         if exit_event is not None and \
             not isinstance(exit_event, multiprocessing.synchronize.Event):
-            raise ValueError("exit_event must be a multiprocessing.Event")
+            raise exceptions.ShmLockValueError("exit_event must be a multiprocessing.Event")
 
         if not lock_name:
-            raise ValueError("lock_name must not be empty")
+            raise exceptions.ShmLockValueError("lock_name must not be empty")
 
         super().__init__(logger=logger)
 
@@ -189,7 +189,7 @@ class ShmLock(ShmModuleBaseLogger):
         finally:
             self.release()
         if throw:
-            raise TimeoutError(f"Could not acquire lock {self}")
+            raise exceptions.ShmLockTimeoutError(f"Could not acquire lock {self}")
         yield False
 
 
@@ -211,7 +211,7 @@ class ShmLock(ShmModuleBaseLogger):
         if self.acquire(timeout=self._timeout):
             return True
         if self._throw:
-            raise TimeoutError(f"Could not acquire lock {self}")
+            raise exceptions.ShmLockTimeoutError(f"Could not acquire lock {self}")
         return False
 
     def __call__(self, timeout=None, throw=False):
@@ -279,7 +279,7 @@ class ShmLock(ShmModuleBaseLogger):
             # None means infinite wait
             try:
                 if self._shm is not None:
-                    raise RuntimeError("lock already acquired; "\
+                    raise exceptions.ShmLockRuntimeError("lock already acquired; "\
                                        "release it first via .release() function. "\
                                        "Alternatively, you are using the same lock instances "\
                                        "among different threads. Do not do that. If you must: "\
@@ -359,7 +359,8 @@ class ShmLock(ShmModuleBaseLogger):
                                       PROCESS_NAME,
                                       self,
                                       KEYBOARD_INTERRUPT_QUERY_NUMBER)
-                            raise KeyboardInterrupt(f"Potential dangling shm: {self}") from err
+                            raise exceptions.ShmLockDanglingSharedMemoryError("Potential "\
+                                f"dangling shm: {self}") from err
 
                         # if else not triggered in loop -> keyboard interrupt without dangling shm
                         # message is raised
@@ -373,7 +374,7 @@ class ShmLock(ShmModuleBaseLogger):
                         "blocks and on Linux clean them up manually at path /dev/shm.",
                         err2,
                         self)
-                    raise ValueError(f"Shared memory {self}") from err2
+                    raise exceptions.ShmLockValueError(f"Shared memory {self}") from err2
                 except FileNotFoundError:
                     # shared memory does not exist, so keyboard interrupt did not yield to
                     # any undesired behavior. will lead to raise of KeyboardInterrupt
@@ -419,8 +420,8 @@ class ShmLock(ShmModuleBaseLogger):
                 remove_from_resource_tracker(self._name)
             except Exception as err: # pylint: disable=(broad-exception-caught)
                 # other errors will raised as RuntimeError
-                raise RuntimeError(f"process {PROCESS_NAME} could not release lock "\
-                    f"{self}. This might result in a leaking resource! "\
+                raise exceptions.ShmLockRuntimeError(f"process {PROCESS_NAME} could not "\
+                    f"release lock {self}. This might result in a leaking resource! "\
                     f"Error was {err}") from err
         return False
 

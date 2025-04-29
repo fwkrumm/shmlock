@@ -2,6 +2,7 @@
 base logger, only a wrapper around the logger
 """
 import logging
+from shmlock.shmlock_exceptions import ShmLockValueError
 class ShmModuleBaseLogger:
 
     """
@@ -21,7 +22,8 @@ class ShmModuleBaseLogger:
             logger to be used, by default None
         """
         if logger is not None and not isinstance(logger, logging.Logger):
-            raise ValueError(f"logger must be of type logging.Logger, instead got {type(logger)}")
+            raise ShmLockValueError("logger must be of type logging.Logger, "\
+                f"instead got {type(logger)}")
         self._logger = logger
 
     def info(self, message: str, *args):

@@ -6,6 +6,7 @@ import unittest
 from multiprocessing import shared_memory
 import shmlock
 from shmlock import shmlock_resource_tracking
+import shmlock.shmlock_exceptions
 
 
 class InitTest(unittest.TestCase):
@@ -43,16 +44,16 @@ class InitTest(unittest.TestCase):
         """
         test if wrong parameter types are caught
         """
-        with self.assertRaises(ValueError):
+        with self.assertRaises(shmlock.shmlock_exceptions.ShmLockValueError):
             shmlock.ShmLock("some_name", poll_interval=None)
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(shmlock.shmlock_exceptions.ShmLockValueError):
             shmlock.ShmLock("some_name", logger=1)
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(shmlock.shmlock_exceptions.ShmLockValueError):
             shmlock.ShmLock("some_name", exit_event=1)
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(shmlock.shmlock_exceptions.ShmLockValueError):
             shmlock.ShmLock(1)
 
     def test_unique_custom_resource_tracker(self):
@@ -70,17 +71,17 @@ class InitTest(unittest.TestCase):
         it will lead to high cpu usage and takes a long time. thus we prevent it explicitly.
         Test for int and float
         """
-        with self.assertRaises(ValueError):
+        with self.assertRaises(shmlock.shmlock_exceptions.ShmLockValueError):
             shmlock.ShmLock("some_name", poll_interval=0)
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(shmlock.shmlock_exceptions.ShmLockValueError):
             shmlock.ShmLock("some_name", poll_interval=0.0)
 
     def test_no_negative_poll(self):
         """
         test if negative poll interval is caught
         """
-        with self.assertRaises(ValueError):
+        with self.assertRaises(shmlock.shmlock_exceptions.ShmLockValueError):
             shmlock.ShmLock("some_name", poll_interval=-1)
 
 if __name__ == "__main__":

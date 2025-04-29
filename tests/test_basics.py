@@ -5,7 +5,7 @@ import time
 import unittest
 from multiprocessing import shared_memory
 import shmlock
-
+import shmlock.shmlock_exceptions
 
 class BasicsTest(unittest.TestCase):
     """
@@ -31,7 +31,7 @@ class BasicsTest(unittest.TestCase):
         obj = shmlock.ShmLock(shm_name)
 
         self.assertTrue(obj.acquire())
-        with self.assertRaises(RuntimeError):
+        with self.assertRaises(shmlock.shmlock_exceptions.ShmLockRuntimeError):
             obj.acquire() # already acquired for this object
 
         obj2 = shmlock.ShmLock(shm_name)
