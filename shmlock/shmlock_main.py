@@ -432,12 +432,14 @@ class ShmLock(ShmModuleBaseLogger):
                            "posix systems if the resource tracker was used to clean "\
                            "up while the lock was acquired.",
                            self)
-                remove_from_resource_tracker(self._name)
+
             except Exception as err: # pylint: disable=(broad-exception-caught)
                 # other errors will raised as RuntimeError
                 raise exceptions.ShmLockRuntimeError(f"process {PROCESS_NAME} could not "\
                     f"release lock {self}. This might result in a leaking resource! "\
                     f"Error was {err}") from err
+            finally:
+                remove_from_resource_tracker(self._name)
         return False
 
     def __del__(self):

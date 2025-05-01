@@ -103,8 +103,10 @@ class ResourceTrackerSingleton(ShmModuleBaseLogger,
         # current one. on non-posix systems this is not necessary since the fork method is not
         # supported. an alternative would be to prevent sharing via inheritance. However, this
         # might cause problems due to singleton nature.
-        self._shared_memories = {os.getpid(): self._shared_memories.setdefault(os.getpid(), [])}
-        return self._shared_memories[os.getpid()]
+        with self._lock:
+            self._shared_memories = {os.getpid(): self._shared_memories.setdefault(os.getpid(),
+                                                                                   [])}
+            return self._shared_memories[os.getpid()]
 
     def add_shared_memory(self, name: str):
         """
@@ -169,7 +171,7 @@ class ResourceTrackerSingleton(ShmModuleBaseLogger,
                     # try to release the shm of the corresponding lock
                     shm = shared_memory.SharedMemory(name=shm_name)
                     try:
-                        # NOTE that in widows this does nothing since unlink() is not supported
+                        # NOTE that on windows unlink() is not supported
                         shm.close()
                         shm.unlink()
                         del shm
@@ -182,6 +184,9 @@ class ResourceTrackerSingleton(ShmModuleBaseLogger,
                     # closed/unlinked elsewhere. in that case i.e. if we do not find the shared
                     # memory -> only remove it from the list
                     pass
+                except ValueError as err:
+                    # possible on linux; shm block requires to be deleted manually
+                    self.error("Error: %s", err)
                 # setdefault called within _shared_memories_current_pid, before so key exists
                 self._shared_memories[os.getpid()].remove(shm_name)
                 self.debug("during clean up: removed shared memory %s from tracking list",
