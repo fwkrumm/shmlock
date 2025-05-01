@@ -421,7 +421,6 @@ class ShmLock(ShmModuleBaseLogger):
                 self._shm.close()
                 self._shm.unlink()
                 self._shm = None
-                remove_from_resource_tracker(self._name)
                 self.debug("%s released lock %s", PROCESS_NAME, self)
                 return True
             except FileNotFoundError:
@@ -432,7 +431,6 @@ class ShmLock(ShmModuleBaseLogger):
                            "posix systems if the resource tracker was used to clean "\
                            "up while the lock was acquired.",
                            self)
-
             except Exception as err: # pylint: disable=(broad-exception-caught)
                 # other errors will raised as RuntimeError
                 raise exceptions.ShmLockRuntimeError(f"process {PROCESS_NAME} could not "\
@@ -498,6 +496,7 @@ class ShmLock(ShmModuleBaseLogger):
         None
             if the lock does not exist or is not acquired; NOTE that if you call this in the
             mean time the lock might be released by another process and you get None
+            Also on windows during this time no new locks can be acquired.
         """
         shm = None
         try:
