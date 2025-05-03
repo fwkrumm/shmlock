@@ -12,6 +12,7 @@ import multiprocessing.synchronize
 from multiprocessing import shared_memory
 from multiprocessing import Event
 from contextlib import contextmanager
+from dataclasses import dataclass
 import logging
 
 __all__ = ["ShmLock",
@@ -88,6 +89,19 @@ class ShmUuid:
         """
         return uuid.UUID(uuid_str).bytes
 
+@dataclass
+class ShmLockConfig():
+    """
+    data class to store the configuration of the lock
+    """
+    name: str
+    poll_interval: float
+    exit_event: multiprocessing.synchronize.Event
+    track: bool
+    timeout: float
+    throw: bool
+    uuid: ShmUuid
+
 class ShmLock(ShmModuleBaseLogger):
 
     """
@@ -142,23 +156,22 @@ class ShmLock(ShmModuleBaseLogger):
 
         super().__init__(logger=logger)
 
-        self._name = lock_name
-        self._poll_interval = float(poll_interval) # use float type
-        self._timeout = None # for __call__
-        self._throw = False # for __call__
-        self._exit_event = exit_event if exit_event is not None else Event()
-        self._track = None
+        self._config = ShmLockConfig(name=lock_name,
+                                     poll_interval=float(poll_interval),
+                                     timeout=None, # for __call__
+                                     throw=False, # for __call__
+                                     exit_event=exit_event if exit_event is not None else Event(),
+                                     track=None,
+                                     uuid=ShmUuid())
 
         if track is not None:
             if sys.version_info < (3, 13):
                 raise ValueError("track parameter has been set but it is only supported for "\
                                  "python >= 3.13")
-            self._track = bool(track)
-
-        self._uuid = ShmUuid() # unique identifier for the lock
+            self._config.track = bool(track)
 
         self.debug("lock %s initialized with poll interval %f",
-                   self, self._poll_interval)
+                   self, self._config.poll_interval)
 
     def __repr__(self):
         """
@@ -169,8 +182,8 @@ class ShmLock(ShmModuleBaseLogger):
         str
             representation of the lock class
         """
-        return f"ShmLock(name={self._name}, uuid={self._uuid}, "\
-               f"poll_interval={self._poll_interval}, exit_event={self._exit_event})"
+        return f"ShmLock(name={self._config.name}, uuid={self._config.uuid}, "\
+               f"poll_interval={self._config.poll_interval}, exit_event={self._config.exit_event})"
 
     @contextmanager
     def lock(self, timeout: float = None, throw: bool = False):
@@ -218,12 +231,12 @@ class ShmLock(ShmModuleBaseLogger):
         Raises
         ------
         TimeoutError
-            if self._throw is True and lock acquirement fails
+            if self._config.throw is True and lock acquirement fails
         """
         # acquire the lock
-        if self.acquire(timeout=self._timeout):
+        if self.acquire(timeout=self._config.timeout):
             return True
-        if self._throw:
+        if self._config.throw:
             raise exceptions.ShmLockTimeoutError(f"Could not acquire lock {self}")
         return False
 
@@ -243,8 +256,8 @@ class ShmLock(ShmModuleBaseLogger):
         self
             ...
         """
-        self._timeout = timeout
-        self._throw = throw
+        self._config.timeout = timeout
+        self._config.throw = throw
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
@@ -285,7 +298,7 @@ class ShmLock(ShmModuleBaseLogger):
             True if lock acquired, False otherwise
         """
         start_time = time.perf_counter()
-        while (not self._exit_event.is_set()) and \
+        while (not self._config.exit_event.is_set()) and \
             (not timeout or time.perf_counter() - start_time < timeout):
             # enter loop if exit event is not set and either no timeout is set (0/False) or
             # the passed time of trying to acquire the lock is smaller than the timeout
@@ -297,25 +310,25 @@ class ShmLock(ShmModuleBaseLogger):
                                        "Alternatively, you are using the same lock instances "\
                                        "among different threads. Do not do that. If you must: "\
                                        "Each thread should use its own lock!")
-                if self._track is not None:
+                if self._config.track is not None:
                     # disable unexpected keyword argument warning because track parameter is only
                     # supported for python >= 3.13. We check that in the constructor however
                     # pylint still reports it. There might be a better way to handle this?
-                    self._shm = shared_memory.SharedMemory(name=self._name,
+                    self._shm = shared_memory.SharedMemory(name=self._config.name, # pylint:disable=(unexpected-keyword-arg)
                                                            create=True,
                                                            size=LOCK_SHM_SIZE,
-                                                           track=self._track)
+                                                           track=self._config.track)
                 else:
-                    self._shm = shared_memory.SharedMemory(name=self._name,
+                    self._shm = shared_memory.SharedMemory(name=self._config.name,
                                                            create=True,
                                                            size=LOCK_SHM_SIZE)
 
                 # NOTE: shared memory is after creation(!) not filled with the uuid data in
                 # the same operation. so it MIGHT be possible that the shm block has been
                 # created but not filled with the uuid data so it would be empty.
-                self._shm.buf[:LOCK_SHM_SIZE] = self._uuid.uuid_bytes
+                self._shm.buf[:LOCK_SHM_SIZE] = self._config.uuid.uuid_bytes
 
-                add_to_resource_tracker(self._name)
+                add_to_resource_tracker(self._config.name)
                 self.debug("%s acquired lock %s", PROCESS_NAME, self)
                 return True
             except FileExistsError:
@@ -324,13 +337,13 @@ class ShmLock(ShmModuleBaseLogger):
                          "timeout[s] is %s",
                          PROCESS_NAME,
                          self,
-                         self._poll_interval,
+                         self._config.poll_interval,
                          timeout)
                 if timeout is False:
                     # if timeout is explicitly False
                     #   -> break loop and return False since acquirement failed
                     break
-                self._exit_event.wait(self._poll_interval)
+                self._config.exit_event.wait(self._config.poll_interval)
                 continue
             except KeyboardInterrupt as err:
                 # special treatment for keyboard interrupt since this might lead to a
@@ -364,7 +377,7 @@ class ShmLock(ShmModuleBaseLogger):
                             # we are here attached to it. This also means that if there
                             # is another interrupt (e.g. ctrl+c spamming) this might lead to
                             # an additional dangling shm block?
-                            shm = shared_memory.SharedMemory(name=self._name)
+                            shm = shared_memory.SharedMemory(name=self._config.name)
 
                             # check if uuid for locking lock is available
                             if shm.buf[:LOCK_SHM_SIZE] == b"\x00" * LOCK_SHM_SIZE:
@@ -379,7 +392,7 @@ class ShmLock(ShmModuleBaseLogger):
 
                             # check that this lock instance did not acquire the lock. this should
                             # not be possible with self._shm being None
-                            assert shm.buf[:LOCK_SHM_SIZE] != self._uuid.uuid_bytes, \
+                            assert shm.buf[:LOCK_SHM_SIZE] != self._config.uuid.uuid_bytes, \
                                 "the buffer should not be equal to the uuid of the lock "\
                                 f"{str(self)} since self._shm is None and so the uid should "\
                                 "not have been set!"
@@ -461,7 +474,7 @@ class ShmLock(ShmModuleBaseLogger):
                     f"release lock {self}. This might result in a leaking resource! "\
                     f"Error was {err}") from err
             finally:
-                remove_from_resource_tracker(self._name)
+                remove_from_resource_tracker(self._config.name)
         return False
 
     def __del__(self):
@@ -482,14 +495,14 @@ class ShmLock(ShmModuleBaseLogger):
         """
         get shared memory name
         """
-        return self._name
+        return self._config.name
 
     @property
     def poll_interval(self) -> float:
         """
         get poll interval
         """
-        return self._poll_interval
+        return self._config.poll_interval
 
     def get_exit_event(self) -> multiprocessing.synchronize.Event:
         """
@@ -502,7 +515,7 @@ class ShmLock(ShmModuleBaseLogger):
         multiprocessing.synchronize.Event
             set this to stop the lock acquirement
         """
-        return self._exit_event
+        return self._config.exit_event
 
     def get_uuid_of_locking_lock(self) -> str | None:
         """
@@ -524,7 +537,7 @@ class ShmLock(ShmModuleBaseLogger):
         """
         shm = None
         try:
-            shm = shared_memory.SharedMemory(name=self._name)
+            shm = shared_memory.SharedMemory(name=self._config.name)
             return ShmUuid.byte_to_string(shm.buf[:LOCK_SHM_SIZE])
         except FileNotFoundError:
             return None
