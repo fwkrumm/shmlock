@@ -79,7 +79,7 @@ if __name__ == "__main__":
     # this example does only make sense on posix systems
     if os.name != "posix":
         LOG.error("the resource tracker is only used on posix systems.")
-        sys.exit(0)
+        sys.exit(1)
 
     shm = None
 
