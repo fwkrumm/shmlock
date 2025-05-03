@@ -275,6 +275,56 @@ class ShmLock(ShmModuleBaseLogger):
         """
         self.release()
 
+    def _create(self):
+        """
+        create shared memory block i.e. successfully acquire lock
+
+        Returns
+        -------
+        boolean
+            returns True if lock has been acquired successfully, or raises Exception
+
+        Raises
+        ------
+        exceptions.ShmLockRuntimeError
+            if lock already acquired i.e. for other locks this would mean a deadlock
+        FileExistsError
+            if shared memory block already exists i.e. the lock is already acquired
+        """
+        if self._shm is not None:
+            raise exceptions.ShmLockRuntimeError("lock already acquired; "\
+                                "release it first via .release() function. "\
+                                "Alternatively, you are using the same lock instances "\
+                                "among different threads. Do not do that. If you must: "\
+                                "Each thread should use its own lock!")
+        if self._config.track is not None:
+            # disable unexpected keyword argument warning because track parameter is only
+            # supported for python >= 3.13. We check that in the constructor however
+            # pylint still reports it. There might be a better way to handle this?
+            self._shm = shared_memory.SharedMemory(name=self._config.name, # pylint:disable=(unexpected-keyword-arg)
+                                                    create=True,
+                                                    size=LOCK_SHM_SIZE,
+                                                    track=self._config.track)
+        else:
+            self._shm = shared_memory.SharedMemory(name=self._config.name,
+                                                    create=True,
+                                                    size=LOCK_SHM_SIZE)
+
+        # NOTE: shared memory is after creation(!) not filled with the uuid data in
+        # the same operation. so it MIGHT be possible that the shm block has been
+        # created but not filled with the uuid data so it would be empty.
+        self._shm.buf[:LOCK_SHM_SIZE] = self._config.uuid.uuid_bytes
+
+        add_to_resource_tracker(self._config.name)
+        self.debug("%s acquired lock %s", PROCESS_NAME, self)
+
+        # are there any branches without keyboard interrupt which might lead to self._shm
+        # still being None but shared memory being created?
+        assert self._shm is not None, "self._sh is None without exception being raised. "\
+            "This should not happen!"
+
+        return True
+
     def acquire(self, timeout: float = None) -> bool:
         """
         try to acquire lock i.e. shm
@@ -304,33 +354,7 @@ class ShmLock(ShmModuleBaseLogger):
             # the passed time of trying to acquire the lock is smaller than the timeout
             # None means infinite wait
             try:
-                if self._shm is not None:
-                    raise exceptions.ShmLockRuntimeError("lock already acquired; "\
-                                       "release it first via .release() function. "\
-                                       "Alternatively, you are using the same lock instances "\
-                                       "among different threads. Do not do that. If you must: "\
-                                       "Each thread should use its own lock!")
-                if self._config.track is not None:
-                    # disable unexpected keyword argument warning because track parameter is only
-                    # supported for python >= 3.13. We check that in the constructor however
-                    # pylint still reports it. There might be a better way to handle this?
-                    self._shm = shared_memory.SharedMemory(name=self._config.name, # pylint:disable=(unexpected-keyword-arg)
-                                                           create=True,
-                                                           size=LOCK_SHM_SIZE,
-                                                           track=self._config.track)
-                else:
-                    self._shm = shared_memory.SharedMemory(name=self._config.name,
-                                                           create=True,
-                                                           size=LOCK_SHM_SIZE)
-
-                # NOTE: shared memory is after creation(!) not filled with the uuid data in
-                # the same operation. so it MIGHT be possible that the shm block has been
-                # created but not filled with the uuid data so it would be empty.
-                self._shm.buf[:LOCK_SHM_SIZE] = self._config.uuid.uuid_bytes
-
-                add_to_resource_tracker(self._config.name)
-                self.debug("%s acquired lock %s", PROCESS_NAME, self)
-                return True
+                return self._create() # returns True or raises exception
             except FileExistsError:
                 # if it returns True -> exit event is set and while loop will break
                 self.debug("%s could not acquire lock %s; trying again after %f seconds; "\
