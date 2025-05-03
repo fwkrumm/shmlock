@@ -175,7 +175,7 @@ class ResourceTrackerSingleton(ShmModuleBaseLogger,
                     # try to release the shm of the corresponding lock
                     shm = shared_memory.SharedMemory(name=shm_name)
                     try:
-                        # NOTE that on windows unlink() is not supported
+                        # NOTE that on windows unlink() is not supported/has not effect
                         shm.close()
                         shm.unlink()
                         del shm
