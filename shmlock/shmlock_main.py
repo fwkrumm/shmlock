@@ -303,12 +303,12 @@ class ShmLock(ShmModuleBaseLogger):
                     # pylint still reports it. There might be a better way to handle this?
                     self._shm = shared_memory.SharedMemory(name=self._name,
                                                            create=True,
-                                                           size=1,
+                                                           size=LOCK_SHM_SIZE,
                                                            track=self._track)
                 else:
                     self._shm = shared_memory.SharedMemory(name=self._name,
                                                            create=True,
-                                                           size=1)
+                                                           size=LOCK_SHM_SIZE)
 
                 # NOTE: shared memory is after creation(!) not filled with the uuid data in
                 # the same operation. so it MIGHT be possible that the shm block has been
