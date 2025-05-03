@@ -7,7 +7,7 @@
 - [Installation](#installation)
 - [Quick Dive](#quick-dive)
 - [Examples](#examples)
-- [Troubleshooting and Resource Tracking](#troubleshooting-and-resource-tracking)
+- [Troubleshooting and Known Issues](#troubleshooting-and-known-issues)
 - [ToDos](#todos)
 
 
@@ -43,7 +43,7 @@ So if you chose to use this module it is best to keep the number of synchronized
 This module itself has no additional dependencies. There are multiple ways to install this module:
 
 1. Install directly from the repository:
-`pip install git+https://github.com/NotAvailable-EUR/shmlock@master`
+`pip install git+https://github.com/NotAvailable-EUR/shmlock@1.0.0`
 
 2. Clone this repository and install it from the local files via pip:
     ```
@@ -227,11 +227,13 @@ This file is very similar to `run_perf.py`; however, it focuses solely on `shmlo
 
 
 ---
-<a name="troubleshooting-and-resource-tracking"></a>
-## Troubleshooting and Resource Tracking
+<a name="troubleshooting-and-known-issues"></a>
+## Troubleshooting and Known Issues
 
 
-### Troubleshooting
+### Resource Tracking
+
+For Python 3.13 and later versions, there is an additional parameter for `SharedMemory(..., track: bool = True)` which disables the shared memory tracking that causes the following tracking issues. Adding this parameter to the lock is still a pending task.
 
 On POSIX systems, the `resource_tracker` will likely complain that either `shared_memory` instances were not found or spam `KeyErrors`. This issue is known:
 
@@ -261,7 +263,7 @@ Additionally, there is an experimental custom resource tracker; see the followin
 
 Please note that with Python version 3.13, there will be a "track" parameter for shared memory block creation, which can be used to disable tracking. I am aware of this and will use it at some point in the future.
 
-### Resource Tracking
+### Custom Resource Tracker (experimental)
 
 Since it is crucial that all shared memory blocks are released and the resource tracker on posix systems might cause issues, a custom resource tracker is implemented. Usually however each lock object should release its memory at destruction. To use the (custom) shared memory tracker please follow the following code snippet
 
@@ -302,4 +304,4 @@ shmlock.de_init_custom_resource_tracking_without_clean_up()
 - achieve 100% code coverage
 - upload to PyPI
 - implement safeguards to prevent the resource tracker from being shared among processes
-
+- test for track parameter for python version >= 3.13

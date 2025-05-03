@@ -91,8 +91,9 @@ if __name__ == "__main__":
         assert shm is None
 
 
-    if USE_RESOURCE_TRACKER_FIX:
+    if USE_RESOURCE_TRACKER_FIX and sys.version_info < (3, 13):
         # remove shared memory names by pattern from resource tracker
+        # for 3.13 and above we use the track parameter below
         shmlock.remove_shm_from_resource_tracker("shared_memory")
         shmlock.remove_shm_from_resource_tracker("yet_another")
 
@@ -100,15 +101,30 @@ if __name__ == "__main__":
 
     if shm is not None:
         try:
-            shms.append(shared_memory.SharedMemory(create=True,
-                                                   name=NAME_OF_TEST_SHM_1,
-                                                   size=1))
-            shms.append(shared_memory.SharedMemory(create=True,
-                                                   name=NAME_OF_TEST_SHM_2,
-                                                   size=1))
-            shms.append(shared_memory.SharedMemory(create=True,
-                                                   name=NAME_OF_TEST_SHM_3,
-                                                   size=1))
+            if sys.version_info < (3, 13):
+                shms.append(shared_memory.SharedMemory(create=True,
+                                                    name=NAME_OF_TEST_SHM_1,
+                                                    size=1))
+                shms.append(shared_memory.SharedMemory(create=True,
+                                                    name=NAME_OF_TEST_SHM_2,
+                                                    size=1))
+                shms.append(shared_memory.SharedMemory(create=True,
+                                                    name=NAME_OF_TEST_SHM_3,
+                                                    size=1))
+            else:
+                # python 3.13 and above
+                shms.append(shared_memory.SharedMemory(create=True,
+                                                    name=NAME_OF_TEST_SHM_1,
+                                                    size=1,
+                                                    track=False))
+                shms.append(shared_memory.SharedMemory(create=True,
+                                                    name=NAME_OF_TEST_SHM_2,
+                                                    size=1,
+                                                    track=False))
+                shms.append(shared_memory.SharedMemory(create=True,
+                                                    name=NAME_OF_TEST_SHM_3,
+                                                    size=1,
+                                                    track=False))
         except FileExistsError:
             # if the script ended appruptly, the shared memory might still exist.
             LOG.error("Some shms could not be created. will try to close and unlink all ahms. "\

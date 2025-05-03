@@ -2,6 +2,7 @@
 main class of shared memory lock.
 """
 import time
+import sys
 import multiprocessing
 import multiprocessing.synchronize
 from multiprocessing import shared_memory
@@ -39,7 +40,8 @@ class ShmLock(ShmModuleBaseLogger):
                  lock_name: str,
                  poll_interval: float|int = 0.05,
                  logger: logging.Logger = None,
-                 exit_event: multiprocessing.synchronize.Event = None):
+                 exit_event: multiprocessing.synchronize.Event = None,
+                 track: bool = None):
         """
         default init. set shared memory name (for lock) and poll_interval.
         the latter is used to check if lock is available every poll_interval seconds
@@ -58,6 +60,10 @@ class ShmLock(ShmModuleBaseLogger):
             if None is provided a new one will be initialized. if event is set to true
             -> acquirement will stop and it will not be possible to acquire a lock until event is
             unset/cleared, by default None
+        track : bool, optional
+            set to False if you do want the shared memory block been tracked.
+            This is parameter only supported for python >= 3.13 in SharedMemory
+            class, by default None
         """
         self._shm = None # make sure to initialize _shm at the beginning since otherwise
                          # an AttributeError might occur during destructor if init does not
@@ -80,6 +86,13 @@ class ShmLock(ShmModuleBaseLogger):
         self._timeout = None # for __call__
         self._throw = False # for __call__
         self._exit_event = exit_event if exit_event is not None else Event()
+        self._track = None
+
+        if track is not None:
+            if sys.version_info < (3, 13):
+                raise ValueError("track parameter has been set but it is only supported for "\
+                                 "python >= 3.13")
+            self._track = bool(track)
 
         self.debug("lock %s initialized with poll interval %f",
                    self._name, self._poll_interval)
@@ -209,7 +222,18 @@ class ShmLock(ShmModuleBaseLogger):
                                        "Alternatively, you are using the same lock instances "\
                                        "among different threads. Do not do that. If you must: "\
                                        "Each thread should use its own lock!")
-                self._shm = shared_memory.SharedMemory(name=self._name, create=True, size=1)
+                if self._track is not None:
+                    # disable unexpected keyword argument warning because track parameter is only
+                    # supported for python >= 3.13. We check that in the constructor however
+                    # pylint still reports it. There might be a better way to handle this?
+                    self._shm = shared_memory.SharedMemory(name=self._name,
+                                                           create=True,
+                                                           size=1,
+                                                           track=self._track)
+                else:
+                    self._shm = shared_memory.SharedMemory(name=self._name,
+                                                           create=True,
+                                                           size=1)
                 add_to_resource_tracker(self._name)
                 self.debug("%s acquired lock %s", PROCESS_NAME, self._name)
                 return True

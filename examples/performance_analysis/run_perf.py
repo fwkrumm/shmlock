@@ -38,7 +38,7 @@ log = logging.getLogger("LoggerExampleLockComparison")
 # to prevent log spamming if process spawns
 log_buffer = {"info": [], "error": []}
 
-if os.name == "posix":
+if os.name == "posix" and sys.version_info < (3, 13):
     shmlock.remove_shm_from_resource_tracker("", print_warning=False)
     log_buffer.get("info").append("Removed shared memory from resource tracker "\
                                   "for increased performance.\n\n")
@@ -201,11 +201,15 @@ def worker_different_locks(test_type: str,
     try:
         result = shared_memory.SharedMemory(name=RESULT_SHM_NAME)
         if test_type == "shmlock":
-            lock = shmlock.ShmLock(lock_name, poll_interval=SHM_LOCK_POLL_INTERVAL,
-                                        logger=log)
+            lock = shmlock.ShmLock(lock_name,
+                                   poll_interval=SHM_LOCK_POLL_INTERVAL,
+                                   logger=log,
+                                   track=False if sys.version_info >= (3, 13) else None)
         elif test_type  == "shmlock_with_resource_tracking":
             shmlock.init_custom_resource_tracking()
-            lock = shmlock.ShmLock(lock_name, poll_interval=SHM_LOCK_POLL_INTERVAL)
+            lock = shmlock.ShmLock(lock_name,
+                                   poll_interval=SHM_LOCK_POLL_INTERVAL,
+                                   track=False if sys.version_info >= (3, 13) else None)
         elif test_type == "filelock":
             lock = filelock.FileLock(lock_name)
         elif test_type == "zmq":
