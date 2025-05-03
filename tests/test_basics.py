@@ -23,28 +23,63 @@ class BasicsTest(unittest.TestCase):
         """
         super().__init__(*args, **kwargs)
 
+    def test_release_in_destructor(self):
+        """
+        test that the lock is released in the destructor
+        """
+        shm_name = str(time.time())
+        lock1 = shmlock.ShmLock(shm_name)
+        lock2 = shmlock.ShmLock(shm_name)
+
+        self.assertTrue(lock1.acquire())
+
+        # delete the lock
+        del lock1
+
+        try:
+            # check that the lock can be acquired i.e. that the resource has been released
+            # in the destructor of the lock
+            self.assertTrue(lock2.acquire())
+        finally:
+            lock2.release()
+
+
+    def test_lock_with_exception(self):
+        shm_name = str(time.time())
+        lock = shmlock.ShmLock(shm_name)
+
+        def test_func():
+            with lock:
+                raise Exception("test exception")
+
+        self.assertRaises(Exception, test_func)
+        try:
+            self.assertTrue(lock.acquire()) # lock should be acquired again
+        finally:                              # i.e. shm should not be blocked
+            lock.release()
+
     def test_lock_release(self):
         """
         test the basics
         """
         shm_name = str(time.time())
-        obj = shmlock.ShmLock(shm_name)
+        lock = shmlock.ShmLock(shm_name)
 
-        self.assertTrue(obj.acquire())
+        self.assertTrue(lock.acquire())
         with self.assertRaises(shmlock.shmlock_exceptions.ShmLockRuntimeError):
-            obj.acquire() # already acquired for this object
+            lock.acquire() # already acquired for this lockect
 
-        obj2 = shmlock.ShmLock(shm_name)
-        self.assertFalse(obj2.acquire(timeout=1)) # acquired by other lock
+        lock2 = shmlock.ShmLock(shm_name)
+        self.assertFalse(lock2.acquire(timeout=1)) # acquired by other lock
 
-        self.assertTrue(obj.release()) # relase should be successful
-        self.assertTrue(obj2.acquire()) # not should be acquireable
+        self.assertTrue(lock.release()) # relase should be successful
+        self.assertTrue(lock2.acquire()) # not should be acquireable
 
-        self.assertTrue(obj2.release()) # check successful release
+        self.assertTrue(lock2.release()) # check successful release
 
         # double release should return False
-        self.assertFalse(obj.release())
-        self.assertFalse(obj2.release())
+        self.assertFalse(lock.release())
+        self.assertFalse(lock2.release())
 
 
         shm = None
