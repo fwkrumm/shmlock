@@ -94,6 +94,9 @@ class ResourceTrackerSingleton(ShmModuleBaseLogger,
 
         However, the resource tracker should not be shared among processes.
 
+        NOTE do not use the self._lock here since this function is called within an acquired lock
+            and would result in a deadlock.
+
         Returns
         -------
         list
@@ -103,10 +106,11 @@ class ResourceTrackerSingleton(ShmModuleBaseLogger,
         # current one. on non-posix systems this is not necessary since the fork method is not
         # supported. an alternative would be to prevent sharing via inheritance. However, this
         # might cause problems due to singleton nature.
-        with self._lock:
-            self._shared_memories = {os.getpid(): self._shared_memories.setdefault(os.getpid(),
-                                                                                   [])}
-            return self._shared_memories[os.getpid()]
+        #with self._lock: # NOTE this function is locked by parent functions. DO NOT USE A LOCK
+        # LOCK HERE SINCE IT RESULTS IN A DEADLOCK
+        self._shared_memories = {os.getpid(): self._shared_memories.setdefault(os.getpid(),
+                                                                                [])}
+        return self._shared_memories[os.getpid()]
 
     def add_shared_memory(self, name: str):
         """
