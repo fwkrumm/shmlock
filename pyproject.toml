@@ -30,4 +30,4 @@ version = { source = "file", path = "shmlock/__init__.py" }
 distribution = true
 
 [project.urls]
-homepage = "https://your.package.url"
+homepage = "https://github.com/fwkrumm/shmlock"
