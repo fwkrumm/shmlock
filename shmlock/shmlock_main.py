@@ -198,11 +198,13 @@ class ShmLock(ShmModuleBaseLogger):
                                      uuid=ShmUuid())
 
         if track is not None:
+            # track parameter not supported for python < 3.13
             if sys.version_info < (3, 13):
                 raise ValueError("track parameter has been set but it is only supported for "\
                                  "python >= 3.13")
             self._config.track = bool(track)
 
+        # add lock instance to reference list
         with self.__class__.instances_lock:
             self.__class__.instances.add(self)
 
@@ -614,7 +616,8 @@ class ShmLock(ShmModuleBaseLogger):
     @description.setter
     def description(self, description: str):
         """
-        set description of the lock
+        set description of the lock to add custom information to the lock
+        e.g. for debugging purposes
 
         Parameters
         ----------
