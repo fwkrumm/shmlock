@@ -364,7 +364,7 @@ class ShmLock(ShmModuleBaseLogger):
             try:
                 return self._create_or_fail() # returns True or raises exception
             except FileExistsError:
-                # if it returns True -> exit event is set and while loop will break
+                # shared memory block already exists, i.e. the lock is already acquired
                 self.debug("%s could not acquire lock %s; trying again after %f seconds; "\
                          "timeout[s] is %s",
                          PROCESS_NAME,
@@ -383,91 +383,123 @@ class ShmLock(ShmModuleBaseLogger):
                 # interrupted somewhere within the shared memory creation process within the
                 # multiprocessing library.
                 self.warning("KeyboardInterrupt: process %s interrupted while trying to "\
-                           "acquire lock %s. This might lead to leaking resources. "\
-                           "shared memory variable is %s",
-                           PROCESS_NAME,
-                           self,
-                           self._shm)
+                             "acquire lock %s. This might lead to leaking resources. "\
+                             "shared memory variable is %s",
+                             PROCESS_NAME,
+                             self,
+                             self._shm)
 
                 if self._shm is None:
 
                     # shared memory object has not yet been returned, but it might have been
                     # created.
-
-                    try:
-
-                        cnt = 0
-
-                        while cnt < KEYBOARD_INTERRUPT_QUERY_NUMBER:
-
-                            cnt+=1
-
-                            # check if shared memory is attachable; NOTE that we do not call
-                            # shm.unlink() here since we cannot assure that another process
-                            # might have acquired the lock. it us not probable but possible.
-                            # also NOTE that on Windows, no new locks can be acquired during
-                            # we are here attached to it. This also means that if there
-                            # is another interrupt (e.g. ctrl+c spamming) this might lead to
-                            # an additional dangling shm block?
-                            shm = shared_memory.SharedMemory(name=self._config.name)
-
-                            # check if uuid for locking lock is available
-                            if shm.buf[:LOCK_SHM_SIZE] == b"\x00" * LOCK_SHM_SIZE:
-                                # we could attach but no uuid is set, i.e. either a dangling shm
-                                # or the other lock process just created the block but did not yet
-                                # wrote its uuid; we try multiple times to attach to the shm block.
-                                # if we end up in this condition each time we assume that the
-                                # block is dangling.
-                                shm.close()
-                                time.sleep(0.05) # magic number; 50ms
-                                continue
-
-                            # check that this lock instance did not acquire the lock. this should
-                            # not be possible with self._shm being None
-                            assert shm.buf[:LOCK_SHM_SIZE] != self._config.uuid.uuid_bytes, \
-                                "the buffer should not be equal to the uuid of the lock "\
-                                f"{str(self)} since self._shm is None and so the uid should "\
-                                "not have been set!"
-
-                            # some other process has acquired the lock. this instance can die now.
-                            shm.close()
-                            break
-                        else:
-                            self.error("KeyboardInterrupt: process %s interrupted while trying to "\
-                                        "acquire lock %s. The shared memory block is seemingly "\
-                                        "dangling since for %s times no uuid has been "\
-                                        "written to the block. A manual clean up is required, "\
-                                        "i.e. on Linux you could try to attach and unlink. "\
-                                        "On Windows all handles need to be closed.",
-                                        PROCESS_NAME,
-                                        self,
-                                        KEYBOARD_INTERRUPT_QUERY_NUMBER)
-                            raise exceptions.ShmLockDanglingSharedMemoryError("Potential "\
-                                f"dangling shm: {self}") from err
-
-                        # if else not triggered in loop -> keyboard interrupt without dangling shm
-                        # message is raised
-                    except ValueError as err2:
-                        # happened only on linux systems so far: shared memory block has been
-                        # created but with size 0; so it cannot be attached to (size == 0) or
-                        # created (exists already). In this case shared memory has to be removed
-                        # from /dev/shm manually
-                        self.error("%s: shared memory %s is not available. "\
-                            "This might be caused by a process termination. "\
-                            "Please check the system for any remaining shared memory "\
-                            "blocks and on Linux clean them up manually at path /dev/shm.",
-                            err2,
-                            self)
-                        raise exceptions.ShmLockValueError(f"Shared memory {self}") from err2
-                    except FileNotFoundError:
-                        # shared memory does not exist, so keyboard interrupt did not yield to
-                        # any undesired behavior. will lead to raise of KeyboardInterrupt
-                        pass
+                    self._keyboard_interrupt_check(err)
 
                 # raise keyboardinterrupt to stop the process; release() will clean up.
                 raise KeyboardInterrupt("ctrl+c") from err
         # could not acquire within timeout or exit event is set
         return False
+
+    def _keyboard_interrupt_check(self, err: KeyboardInterrupt):
+        """
+        try to check if the shared memory block is dangling or not. This is only the case
+        if the process is interrupted somewhere within the shared memory creation process
+
+        Parameters
+        ----------
+        err : KeyboardInterrupt
+            keyboard interrupt error to be raised
+
+        Raises
+        ------
+        exceptions.ShmLockDanglingSharedMemoryError
+            if the shared memory block is potentially dangling i.e. it had been created but
+            its reference was not yet returned. So it cannot be released or attached to.
+            Probably the user has to delete it manually from /dev/shm (Linux).
+
+        exceptions.ShmLockValueError
+            if the shared memory block is not available, i.e. it has been created but with size 0.
+            This is only the case if the process was interrupted during the acquirement process
+            and the shared memory block was not created yet. New shared memory blocks cannot
+            be created, not can any instance attach to it. Probably the user has to delete it
+            manually from /dev/shm (Linux).
+
+        FileNotFoundError
+            if the shared memory block does not exist
+
+        """
+        try:
+
+            cnt = 0
+
+            while cnt < KEYBOARD_INTERRUPT_QUERY_NUMBER:
+
+                cnt+=1
+                shm = None
+
+                # check if shared memory is attachable; NOTE that we do not call
+                # shm.unlink() here since we cannot assure that another process
+                # might have acquired the lock. it us not probable but possible.
+                # also NOTE that on Windows, no new locks can be acquired during
+                # we are here attached to it. This also means that if there
+                # is another interrupt (e.g. ctrl+c spamming) this might lead to
+                # an additional dangling shm block?
+                try:
+                    shm = shared_memory.SharedMemory(name=self._config.name)
+
+                    # check if uuid for locking lock is available
+                    if shm.buf[:LOCK_SHM_SIZE] == b"\x00" * LOCK_SHM_SIZE:
+                        # we could attach but no uuid is set, i.e. either a dangling shm
+                        # or the other lock process just created the block but did not yet
+                        # wrote its uuid; we try multiple times to attach to the shm block.
+                        # if we end up in this condition each time we assume that the
+                        # block is dangling.
+                        time.sleep(0.05) # magic number; 50ms
+                        continue
+
+                    # check that this lock instance did not acquire the lock. this should
+                    # not be possible with self._shm being None
+                    assert shm.buf[:LOCK_SHM_SIZE] != self._config.uuid.uuid_bytes, \
+                        "the buffer should not be equal to the uuid of the lock "\
+                        f"{str(self)} since self._shm is None and so the uid should "\
+                        "not have been set!"
+
+                    # some other process has acquired the lock. this instance can die now.
+                    break
+                finally:
+                    if shm is not None:
+                        shm.close()
+            else:
+                self.error("KeyboardInterrupt: process %s interrupted while trying to "\
+                            "acquire lock %s. The shared memory block is seemingly "\
+                            "dangling since for %s times no uuid has been "\
+                            "written to the block. A manual clean up is required, "\
+                            "i.e. on Linux you could try to attach and unlink. "\
+                            "On Windows all handles need to be closed.",
+                            PROCESS_NAME,
+                            self,
+                            KEYBOARD_INTERRUPT_QUERY_NUMBER)
+                raise exceptions.ShmLockDanglingSharedMemoryError("Potential "\
+                    f"dangling shm: {self}") from err
+
+            # if else not triggered in loop -> keyboard interrupt without dangling shm
+            # message is raised
+        except ValueError as err2:
+            # happened only on linux systems so far: shared memory block has been
+            # created but with size 0; so it cannot be attached to (size == 0) or
+            # created (exists already). In this case shared memory has to be removed
+            # from /dev/shm manually
+            self.error("%s: shared memory %s is not available. "\
+                "This might be caused by a process termination. "\
+                "Please check the system for any remaining shared memory "\
+                "blocks and on Linux clean them up manually at path /dev/shm.",
+                err2,
+                self)
+            raise exceptions.ShmLockValueError(f"Shared memory {self}") from err2
+        except FileNotFoundError:
+            # shared memory does not exist, so keyboard interrupt did not yield to
+            # any undesired behavior. will lead to raise of KeyboardInterrupt
+            pass
 
     def release(self) -> bool:
         """
@@ -538,9 +570,17 @@ class ShmLock(ShmModuleBaseLogger):
         """
         return self._config.poll_interval
 
+    @property
+    def uuid(self) -> str:
+        """
+        get uuid of the lock
+        """
+        return self._config.uuid.uuid_str
+
     def get_exit_event(self) -> multiprocessing.synchronize.Event:
         """
-        get exit event
+        get exit event; if lock should be stopped/prevent from further acquirements, set this
+        event.
 
         NOTE do not set this event to any type except an Event
 
@@ -588,9 +628,9 @@ class ShmLock(ShmModuleBaseLogger):
     @classmethod
     def cleanup(cls):
         """
-        make sure to release all locks and remove all instances from the list
-
-        a signal handler could be defined via
+        release all locks and remove all instances from the list. This function
+        is designed to be used within a signal handler to release all potentially acquired
+        memory of the process. E.g. via
 
         def signal_handler(signum, frame):
             ShmnLock.cleanup()
@@ -598,6 +638,10 @@ class ShmLock(ShmModuleBaseLogger):
 
         signal.signal(signal.SIGINT, signal_handler)
         signal.signal(signal.SIGTERM, signal_handler)
+
+
+        NOTE we could also do the size==0 shared memory check here instead of in the acquire()
+        function?
         """
         with cls.instances_lock:
             for instance in cls.instances:
