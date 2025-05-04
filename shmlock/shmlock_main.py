@@ -18,30 +18,19 @@ from dataclasses import dataclass
 import logging
 
 __all__ = ["ShmLock",
-           "remove_shm_from_resource_tracker",
-           "init_custom_resource_tracking",
-           "de_init_custom_resource_tracking",
-           "de_init_custom_resource_tracking_without_clean_up",
-           "enable_disable_warnings"
+           "remove_shm_from_resource_tracker"
            ]
 
 # reveal functions for resource tracking adjustments
 import  shmlock.shmlock_exceptions as exceptions
 from shmlock.shmlock_monkey_patch import remove_shm_from_resource_tracker
-from shmlock.shmlock_resource_tracking import init_custom_resource_tracking
-from shmlock.shmlock_resource_tracking import de_init_custom_resource_tracking
-from shmlock.shmlock_resource_tracking import de_init_custom_resource_tracking_without_clean_up
-from shmlock.shmlock_resource_tracking import add_to_resource_tracker
-from shmlock.shmlock_resource_tracking import remove_from_resource_tracker
-from shmlock.shmlock_resource_tracking import enable_disable_warnings
-from shmlock.shmlock_resource_tracking import PROCESS_NAME
-
 from shmlock.shmlock_base_logger import ShmModuleBaseLogger
 
 LOCK_SHM_SIZE = 16 # size of the shared memory block in bytes to store uuid
 KEYBOARD_INTERRUPT_QUERY_NUMBER = 3 # at keyboard interrupt it will be checked if there is a
                                    # dangling shared memory block. This will be done a specific
                                    # number of times. Not a perfect solution
+PROCESS_NAME = multiprocessing.current_process().name
 
 # to-do: to own class
 class ShmUuid:
@@ -122,7 +111,7 @@ class ShmLock(ShmModuleBaseLogger):
     """
 
     # for resource tracking
-    instances = weakref.WeakSet()  # share storage for all instances
+    instances = weakref.WeakSet()  # for reference tracking of all instances
     instances_lock = threading.Lock()  # lock for thread safety
 
     def __init__(self,
@@ -312,7 +301,7 @@ class ShmLock(ShmModuleBaseLogger):
             if shared memory block already exists i.e. the lock is already acquired
         """
         if self._shm is not None:
-            raise exceptions.ShmLockRuntimeError("lock already acquired; "\
+            raise exceptions.ShmLockRuntimeError("lock already acquired (Deadlock); "\
                                 "release it first via .release() function. "\
                                 "Alternatively, you are using the same lock instances "\
                                 "among different threads. Do not do that. If you must: "\
@@ -335,12 +324,11 @@ class ShmLock(ShmModuleBaseLogger):
         # created but not filled with the uuid data so it would be empty.
         self._shm.buf[:LOCK_SHM_SIZE] = self._config.uuid.uuid_bytes
 
-        add_to_resource_tracker(self._config.name)
         self.debug("%s acquired lock %s", PROCESS_NAME, self)
 
         # are there any branches without keyboard interrupt which might lead to self._shm
         # still being None but shared memory being created?
-        assert self._shm is not None, "self._sh is None without exception being raised. "\
+        assert self._shm is not None, "self._shm is None without exception being raised. "\
             "This should not happen!"
 
         return True
@@ -517,8 +505,6 @@ class ShmLock(ShmModuleBaseLogger):
                 raise exceptions.ShmLockRuntimeError(f"process {PROCESS_NAME} could not "\
                     f"release lock {self}. This might result in a leaking resource! "\
                     f"Error was {err}") from err
-            finally:
-                remove_from_resource_tracker(self._config.name)
         return False
 
     def __del__(self):
@@ -603,6 +589,15 @@ class ShmLock(ShmModuleBaseLogger):
     def cleanup(cls):
         """
         make sure to release all locks and remove all instances from the list
+
+        a signal handler could be defined via
+
+        def signal_handler(signum, frame):
+            ShmnLock.cleanup()
+            sys.exit(0)
+
+        signal.signal(signal.SIGINT, signal_handler)
+        signal.signal(signal.SIGTERM, signal_handler)
         """
         with cls.instances_lock:
             for instance in cls.instances:

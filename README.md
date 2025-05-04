@@ -263,39 +263,6 @@ Additionally, there is an experimental custom resource tracker; see the followin
 
 Please note that with Python version 3.13, there will be a "track" parameter for shared memory block creation, which can be used to disable tracking. I am aware of this and will use it at some point in the future.
 
-### Custom Resource Tracker (experimental)
-
-Since it is crucial that all shared memory blocks are released and the resource tracker on posix systems might cause issues, a custom resource tracker is implemented. Usually however each lock object should release its memory at destruction. To use the (custom) shared memory tracker please follow the following code snippet
-
-Note that this is still experimental.
-
-```python
-
-import logging
-import shmlock
-
-# disable warnings if desired
-shmlock.enable_disable_warnings(False)
-
-# optional logger; if a history of the tracking is required, it is currently suggested to use a file logger
-logging.basicConfig(level="DEBUG")
-log = logging.getLogger(__name__)
-
-# init resource tracking (once per process)
-shmlock.init_custom_resource_tracking(logger=log)
-
-# now use the ShmLock. Each requirement/release is logged via the specified logger (debug level)
-...
-
-
-# to uninitialize tracking use
-shmlock.de_init_custom_resource_tracking()
-# OR
-shmlock.de_init_custom_resource_tracking_without_clean_up()
-# the latter does only report and not free anything
-
-```
-
 
 ---
 <a name="todos"></a>

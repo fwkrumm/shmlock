@@ -5,7 +5,6 @@ import time
 import unittest
 from multiprocessing import shared_memory
 import shmlock
-from shmlock import shmlock_resource_tracking
 import shmlock.shmlock_exceptions
 
 
@@ -55,15 +54,6 @@ class InitTest(unittest.TestCase):
 
         with self.assertRaises(shmlock.shmlock_exceptions.ShmLockValueError):
             shmlock.ShmLock(1)
-
-    def test_unique_custom_resource_tracker(self):
-        """
-        test if resource tracking is singleton
-        """
-        tracker1 = shmlock_resource_tracking.ResourceTrackerSingleton()
-        tracker2 = shmlock_resource_tracking.ResourceTrackerSingleton()
-        self.assertTrue(id(tracker1) == id(tracker2), "ResourceTrackerSingleton should be "\
-            "singleton. Only ine id should exist per process")
 
     def test_no_zero_poll(self):
         """

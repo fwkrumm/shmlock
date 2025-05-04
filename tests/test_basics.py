@@ -1,9 +1,9 @@
 """
 tests of basics (lock/release) of shmlock package
 """
+from multiprocessing import shared_memory
 import time
 import unittest
-from multiprocessing import shared_memory
 import shmlock
 import shmlock.shmlock_exceptions
 
