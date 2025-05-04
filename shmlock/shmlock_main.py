@@ -515,7 +515,7 @@ class ShmLock(ShmModuleBaseLogger):
         with self.__class__.instances_lock:
             if self in self.__class__.instances:
                 self.__class__.instances.remove(self)
-                self.info("instance %s removed.", self)
+                self.debug("instance %s removed from reference list.", self)
 
     @property
     def acquired(self) -> bool:
