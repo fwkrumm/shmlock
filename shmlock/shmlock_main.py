@@ -92,9 +92,34 @@ class ShmUuid:
         return self.uuid_str
 
 @dataclass
-class ShmLockConfig():
+class ShmLockConfig(): # pylint: disable=(too-many-instance-attributes)
     """
-    data class to store the configuration of the lock
+    data class to store the configuration parameters of the lock
+
+    Attributes
+    ----------
+    name : str
+        name of the lock i.e. the shared memory block
+    poll_interval : float
+        time delay in seconds after a failed acquire try after which it will be tried
+        again to acquire the lock
+    exit_event : multiprocessing.synchronize.Event
+        if None is provided a new one will be initialized. if event is set to true
+        -> acquirement will stop and it will not be possible to acquire a lock until event is
+        unset/cleared
+    track : bool
+        set to False if you do want the shared memory block been tracked.
+        This is parameter only supported for python >= 3,13 in SharedMemory
+        class
+    timeout : float
+        max timeout in seconds until lock acquirement is aborted
+    throw : bool
+        set to True if exception is supposed to be raised after
+        acquirement fails
+    uuid : ShmUuid
+        uuid of the lock
+    description : str, optional
+        custom description of the lock which can be set as property setter, by default ""
     """
     name: str
     poll_interval: float
@@ -103,6 +128,7 @@ class ShmLockConfig():
     timeout: float
     throw: bool
     uuid: ShmUuid
+    description: str = "" # custom description
 
 class ShmLock(ShmModuleBaseLogger):
 
@@ -191,8 +217,10 @@ class ShmLock(ShmModuleBaseLogger):
         str
             representation of the lock class
         """
-        return f"ShmLock(name={self._config.name}, uuid={self._config.uuid}, "\
-               f"poll_interval={self._config.poll_interval})"
+        return f"ShmLock(name={self._config.name}, "\
+               f"uuid={self._config.uuid}, "\
+               f"poll_interval={self._config.poll_interval}, "\
+               f"description={self._config.description})"
 
     @contextmanager
     def lock(self, timeout: float = None, throw: bool = False):
@@ -284,6 +312,72 @@ class ShmLock(ShmModuleBaseLogger):
         """
         self.release()
 
+    def acquire(self, timeout: float = None) -> bool:
+        """
+        try to acquire lock i.e. shm
+
+        None -> wait indefinitely
+        False -> no timeout (try acquire lock one time)
+        True -> 1 second timeout
+        float -> timeout in seconds
+
+        Parameters
+        ----------
+        timeout : float, optional
+            max timeout for lock acquirement in seconds. boolean type is also supported,
+            True converts to 1 meaning 1 second timeout and False to 0 meaning
+            no timeout i.e. lock acquirement is only tried one time. None means
+            infinite wait for lock acquirement, by default None
+
+        Returns
+        -------
+        bool
+            True if lock acquired, False otherwise
+        """
+        start_time = time.perf_counter()
+        while (not self._config.exit_event.is_set()) and \
+            (not timeout or time.perf_counter() - start_time < timeout):
+            # enter loop if exit event is not set and either no timeout is set (0/False) or
+            # the passed time of trying to acquire the lock is smaller than the timeout
+            # None means infinite wait
+            try:
+                return self._create_or_fail() # returns True or raises exception
+            except FileExistsError:
+                # shared memory block already exists, i.e. the lock is already acquired
+                self.debug("%s could not acquire lock %s; "\
+                         "timeout[s] is %s",
+                         PROCESS_NAME,
+                         self,
+                         timeout)
+                if timeout is False:
+                    # if timeout is explicitly False
+                    #   -> break loop and return False since acquirement failed
+                    break
+                self._config.exit_event.wait(self._config.poll_interval)
+                continue
+            except KeyboardInterrupt as err:
+                # special treatment for keyboard interrupt since this might lead to a
+                # dangling shared memory block. This is only the case if the process is
+                # interrupted somewhere within the shared memory creation process within the
+                # multiprocessing library.
+                self.warning("KeyboardInterrupt: process %s interrupted while trying to "\
+                             "acquire lock %s. This might lead to leaking resources. "\
+                             "shared memory variable is %s",
+                             PROCESS_NAME,
+                             self,
+                             self._shm)
+
+                if self._shm is None:
+
+                    # shared memory object has not yet been returned, but it might have been
+                    # created.
+                    self._keyboard_interrupt_check(err)
+
+                # raise keyboardinterrupt to stop the process; release() will clean up.
+                raise KeyboardInterrupt("ctrl+c") from err
+        # could not acquire within timeout or exit event is set
+        return False
+
     def _create_or_fail(self):
         """
         create shared memory block i.e. successfully acquire lock
@@ -332,73 +426,6 @@ class ShmLock(ShmModuleBaseLogger):
             "This should not happen!"
 
         return True
-
-    def acquire(self, timeout: float = None) -> bool:
-        """
-        try to acquire lock i.e. shm
-
-        None -> wait indefinitely
-        False -> no timeout (try acquire lock one time)
-        True -> 1 second timeout
-        float -> timeout in seconds
-
-        Parameters
-        ----------
-        timeout : float, optional
-            max timeout for lock acquirement in seconds. boolean type is also supported,
-            True converts to 1 meaning 1 second timeout and False to 0 meaning
-            no timeout i.e. lock acquirement is only tried one time. None means
-            infinite wait for lock acquirement, by default None
-
-        Returns
-        -------
-        bool
-            True if lock acquired, False otherwise
-        """
-        start_time = time.perf_counter()
-        while (not self._config.exit_event.is_set()) and \
-            (not timeout or time.perf_counter() - start_time < timeout):
-            # enter loop if exit event is not set and either no timeout is set (0/False) or
-            # the passed time of trying to acquire the lock is smaller than the timeout
-            # None means infinite wait
-            try:
-                return self._create_or_fail() # returns True or raises exception
-            except FileExistsError:
-                # shared memory block already exists, i.e. the lock is already acquired
-                self.debug("%s could not acquire lock %s; trying again after %f seconds; "\
-                         "timeout[s] is %s",
-                         PROCESS_NAME,
-                         self,
-                         self._config.poll_interval,
-                         timeout)
-                if timeout is False:
-                    # if timeout is explicitly False
-                    #   -> break loop and return False since acquirement failed
-                    break
-                self._config.exit_event.wait(self._config.poll_interval)
-                continue
-            except KeyboardInterrupt as err:
-                # special treatment for keyboard interrupt since this might lead to a
-                # dangling shared memory block. This is only the case if the process is
-                # interrupted somewhere within the shared memory creation process within the
-                # multiprocessing library.
-                self.warning("KeyboardInterrupt: process %s interrupted while trying to "\
-                             "acquire lock %s. This might lead to leaking resources. "\
-                             "shared memory variable is %s",
-                             PROCESS_NAME,
-                             self,
-                             self._shm)
-
-                if self._shm is None:
-
-                    # shared memory object has not yet been returned, but it might have been
-                    # created.
-                    self._keyboard_interrupt_check(err)
-
-                # raise keyboardinterrupt to stop the process; release() will clean up.
-                raise KeyboardInterrupt("ctrl+c") from err
-        # could not acquire within timeout or exit event is set
-        return False
 
     def _keyboard_interrupt_check(self, err: KeyboardInterrupt):
         """
@@ -577,6 +604,25 @@ class ShmLock(ShmModuleBaseLogger):
         """
         return self._config.uuid.uuid_str
 
+    @property
+    def description(self) -> str:
+        """
+        get description of the lock
+        """
+        return self._config.description
+
+    @description.setter
+    def description(self, description: str):
+        """
+        set description of the lock
+
+        Parameters
+        ----------
+        description : str
+            description of the lock
+        """
+        self._config.description = description
+
     def get_exit_event(self) -> multiprocessing.synchronize.Event:
         """
         get exit event; if lock should be stopped/prevent from further acquirements, set this
@@ -624,27 +670,3 @@ class ShmLock(ShmModuleBaseLogger):
         """
         with cls.instances_lock:
             return list(cls.instances)
-
-    @classmethod
-    def cleanup(cls):
-        """
-        release all locks and remove all instances from the list. This function
-        is designed to be used within a signal handler to release all potentially acquired
-        memory of the process. E.g. via
-
-        def signal_handler(signum, frame):
-            ShmnLock.cleanup()
-            sys.exit(0)
-
-        signal.signal(signal.SIGINT, signal_handler)
-        signal.signal(signal.SIGTERM, signal_handler)
-
-
-        NOTE we could also do the size==0 shared memory check here instead of in the acquire()
-        function?
-        """
-        with cls.instances_lock:
-            for instance in cls.instances:
-                instance: ShmLock
-                instance.release()
-            cls.instances.clear()
