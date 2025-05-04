@@ -50,9 +50,9 @@ class BasicsTest(unittest.TestCase):
 
         def test_func():
             with lock:
-                raise Exception("test exception")
+                raise RuntimeError("test exception")
 
-        self.assertRaises(Exception, test_func)
+        self.assertRaises(RuntimeError, test_func)
         try:
             self.assertTrue(lock.acquire()) # lock should be acquired again
         finally:                              # i.e. shm should not be blocked

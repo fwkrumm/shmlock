@@ -7,6 +7,8 @@ shared memory blocks. Best practice is to use the exit event to stop the lock fr
 import uuid
 import time
 import sys
+import threading
+import weakref
 import multiprocessing
 import multiprocessing.synchronize
 from multiprocessing import shared_memory
@@ -89,6 +91,17 @@ class ShmUuid:
         """
         return uuid.UUID(uuid_str).bytes
 
+    def __str__(self):
+        """
+        string representation of the uuid
+
+        Returns
+        -------
+        str
+            string representation of the uuid
+        """
+        return self.uuid_str
+
 @dataclass
 class ShmLockConfig():
     """
@@ -107,6 +120,10 @@ class ShmLock(ShmModuleBaseLogger):
     """
     lock class using shared memory to synchronize shared resources access
     """
+
+    # for resource tracking
+    instances = weakref.WeakSet()  # share storage for all instances
+    instances_lock = threading.Lock()  # lock for thread safety
 
     def __init__(self,
                  lock_name: str,
@@ -156,6 +173,7 @@ class ShmLock(ShmModuleBaseLogger):
 
         super().__init__(logger=logger)
 
+        # create config containing all parameters
         self._config = ShmLockConfig(name=lock_name,
                                      poll_interval=float(poll_interval),
                                      timeout=None, # for __call__
@@ -170,8 +188,10 @@ class ShmLock(ShmModuleBaseLogger):
                                  "python >= 3.13")
             self._config.track = bool(track)
 
-        self.debug("lock %s initialized with poll interval %f",
-                   self, self._config.poll_interval)
+        with self.__class__.instances_lock:
+            self.__class__.instances.add(self)
+
+        self.debug("lock %s initialized.", self)
 
     def __repr__(self):
         """
@@ -183,7 +203,7 @@ class ShmLock(ShmModuleBaseLogger):
             representation of the lock class
         """
         return f"ShmLock(name={self._config.name}, uuid={self._config.uuid}, "\
-               f"poll_interval={self._config.poll_interval}, exit_event={self._config.exit_event})"
+               f"poll_interval={self._config.poll_interval})"
 
     @contextmanager
     def lock(self, timeout: float = None, throw: bool = False):
@@ -275,7 +295,7 @@ class ShmLock(ShmModuleBaseLogger):
         """
         self.release()
 
-    def _create(self):
+    def _create_or_fail(self):
         """
         create shared memory block i.e. successfully acquire lock
 
@@ -354,7 +374,7 @@ class ShmLock(ShmModuleBaseLogger):
             # the passed time of trying to acquire the lock is smaller than the timeout
             # None means infinite wait
             try:
-                return self._create() # returns True or raises exception
+                return self._create_or_fail() # returns True or raises exception
             except FileExistsError:
                 # if it returns True -> exit event is set and while loop will break
                 self.debug("%s could not acquire lock %s; trying again after %f seconds; "\
@@ -506,6 +526,10 @@ class ShmLock(ShmModuleBaseLogger):
         destructor
         """
         self.release()
+        with self.__class__.instances_lock:
+            if self in self.__class__.instances:
+                self.__class__.instances.remove(self)
+                self.info("instance %s removed.", self)
 
     @property
     def acquired(self) -> bool:
@@ -545,19 +569,17 @@ class ShmLock(ShmModuleBaseLogger):
         """
         get uuid of the locking lock
 
-        Parameters
-        ----------
-        name : str
-            name of the lock
+
+        NOTE that if you call this in the mean time the lock might be released by another
+        process and you get None. Also on windows during this time no new locks can be acquired.
+        This should be only used for debugging purposes.
 
         Returns
         -------
         str
             uuid of the locking lock
         None
-            if the lock does not exist or is not acquired; NOTE that if you call this in the
-            mean time the lock might be released by another process and you get None
-            Also on windows during this time no new locks can be acquired.
+            if the lock does not exist or is not acquired;
         """
         shm = None
         try:
@@ -568,3 +590,22 @@ class ShmLock(ShmModuleBaseLogger):
         finally:
             if shm is not None:
                 shm.close()
+
+    @classmethod
+    def list_instances(cls):
+        """
+        get list of all class instances (per process)
+        """
+        with cls.instances_lock:
+            return list(cls.instances)
+
+    @classmethod
+    def cleanup(cls):
+        """
+        make sure to release all locks and remove all instances from the list
+        """
+        with cls.instances_lock:
+            for instance in cls.instances:
+                instance: ShmLock
+                instance.release()
+            cls.instances.clear()
