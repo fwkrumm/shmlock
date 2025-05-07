@@ -5,7 +5,6 @@ import sys
 import time
 import os
 import unittest
-from multiprocessing import shared_memory
 import shmlock
 import shmlock.shmlock_exceptions
 
@@ -39,6 +38,13 @@ class LinuxPosixTests(unittest.TestCase):
             # file should be generated at desired location
             self.assertTrue(os.path.isfile(os.path.join(self._shm_location,
                                                         self._shm_name)))
+
+    @unittest.skipUnless(sys.platform.startswith("linux"), "test only for linux")
+    def test_release_in_destructor(self):
+        """
+        test empty shm lock file
+        """
+        pass
 
 
 if __name__ == "__main__":
