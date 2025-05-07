@@ -326,6 +326,10 @@ if __name__ == "__main__":
                 log.info("Result buffer: %d (should be %d)\n\n",
                          final_res,
                          NUM_PROCESSES*NUM_RUNS)
+                # actually if this happens the lock does not work
+                assert final_res == NUM_PROCESSES*NUM_RUNS,\
+                    "lock failed! this should never happen. expected result "\
+                    f"{NUM_PROCESSES*NUM_RUNS} != actual result {final_res}"
     finally:
         if RESULT is not None:
             RESULT.close()
