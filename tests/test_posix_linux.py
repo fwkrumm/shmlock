@@ -32,10 +32,11 @@ class LinuxPosixTests(unittest.TestCase):
         """
         set up the test case
         """
+        self._shm_name = str(time.time())
+
         if sys.platform.startswith("linux"):
             # there is one test to be executed outside linux so we need this special check
             self.assertTrue(os.path.exists(self._shm_location), "shm location does not exist")
-            self._shm_name = str(time.time())
 
             l = shmlock.ShmLock(self._shm_name)
             with l:
