@@ -19,7 +19,8 @@ from dataclasses import dataclass
 import logging
 
 __all__ = ["ShmLock",
-           "remove_shm_from_resource_tracker"
+           "remove_shm_from_resource_tracker",
+           "exceptions"
            ]
 
 # reveal functions for resource tracking adjustments
