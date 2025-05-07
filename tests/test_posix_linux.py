@@ -38,6 +38,7 @@ class LinuxPosixTests(unittest.TestCase):
         with l:
             # file should be generated at desired location
             self.assertTrue(os.path.isfile(os.path.join(self._shm_location,
+                                                        self._shm_name)))
 
 
 if __name__ == "__main__":
