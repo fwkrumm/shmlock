@@ -674,7 +674,7 @@ class ShmLock(ShmModuleBaseLogger):
         shm = None
         try:
             shm = shared_memory.SharedMemory(name=self._config.name)
-            return ShmUuid.byte_to_string(shm.buf[:LOCK_SHM_SIZE])
+            return ShmUuid.byte_to_string(bytes(shm.buf[:LOCK_SHM_SIZE]))
         except FileNotFoundError:
             return None
         finally:
