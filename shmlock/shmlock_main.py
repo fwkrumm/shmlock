@@ -431,6 +431,10 @@ class ShmLock(ShmModuleBaseLogger):
         try to check if the shared memory block is dangling or not. This is only the case
         if the process is interrupted somewhere within the shared memory creation process
 
+        NOTE that this might affect the acquirement of other locks. Since e.g. on Windows
+        as long as the handle is open the shared memory block is not released.
+        So this version is used best at the beginning of the main process or at the end.
+
         Parameters
         ----------
         number_of_checks : int, optional
