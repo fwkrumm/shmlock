@@ -676,6 +676,10 @@ class ShmLock(ShmModuleBaseLogger):
             shm = shared_memory.SharedMemory(name=self._config.name)
             return ShmUuid.byte_to_string(bytes(shm.buf[:LOCK_SHM_SIZE]))
         except FileNotFoundError:
+            # shm does not exist
+            return None
+        except ValueError:
+            # shm is currently created i.e. the file is already there but the content is missing
             return None
         finally:
             if shm is not None:
