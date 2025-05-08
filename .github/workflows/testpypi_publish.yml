@@ -20,7 +20,7 @@ jobs:
       - name: Check if version exists on TestPyPI
         id: check_version
         run: |
-          PACKAGE_NAME="your-package-name"
+          PACKAGE_NAME="shmlock"
           VERSION=$(python -c "import importlib.metadata; print(importlib.metadata.version('$PACKAGE_NAME'))" || echo "unknown")
           RESPONSE=$(curl -s "https://test.pypi.org/pypi/$PACKAGE_NAME/$VERSION/json")
           if [[ $RESPONSE == *"Not Found"* ]]; then
