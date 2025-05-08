@@ -5,6 +5,12 @@ on:
     branches:
       - 20250509_pypi_test
 
+
+  workflow_run:
+    workflows: ["CI_ShmLock"]
+    types:
+      - completed
+
 jobs:
   build:
     runs-on: ubuntu-latest
