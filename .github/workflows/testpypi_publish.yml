@@ -1,15 +1,14 @@
-name: Publish To TestPyPI
+name: Publish to TestPyPI
 
 on:
-  workflow_run:
-    workflows: ["CI_ShmLock"]
-    types:
-      - completed
+  push:
+    branches:
+      - 20250509_pypi_test
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == '20250509_pypi_test'
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
