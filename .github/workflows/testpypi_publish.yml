@@ -17,6 +17,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
+      
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -24,20 +25,10 @@ jobs:
 
       - name: Build package
         run: python -m build
-      - name: Check if version exists on TestPyPI
-        id: check_version
-        run: |
-          PACKAGE_NAME="shmlock"
-          VERSION=$(python -c "import importlib.metadata; print(importlib.metadata.version('$PACKAGE_NAME'))" || echo "unknown")
-          RESPONSE=$(curl -s "https://test.pypi.org/pypi/$PACKAGE_NAME/$VERSION/json")
-          if [[ $RESPONSE == *"Not Found"* ]]; then
-            echo "VERSION_EXISTS=false" >> $GITHUB_ENV
-          else
-            echo "VERSION_EXISTS=true" >> $GITHUB_ENV
-          fi
+
       - name: Publish to TestPyPI
-        if: env.VERSION_EXISTS == 'false'
-        run: twine upload --repository testpypi dist/*
+        run: twine upload --repository testpypi dist/* || echo "⚠Warning: Upload failed, possibly because the version already exists."
+        continue-on-error: true # if version already exists
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.TESTPYPI_API_TOKEN }}
