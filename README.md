@@ -45,7 +45,7 @@ This module itself has no additional dependencies. There are multiple ways to in
 
 1. Install directly from the repository; cf. [Version history](#version-history) :
 `pip install git+https://github.com/NotAvailable-EUR/shmlock@1.0.0`
-`pip install git+https://github.com/NotAvailable-EUR/shmlock@1.1.0`
+`pip install git+https://github.com/NotAvailable-EUR/shmlock@2.0.0`
 
 2. Clone this repository and install it from the local files via pip:
     ```
@@ -287,7 +287,7 @@ If the shared memory is in an inconsistent state—such as being created but unu
 | Version / Git Tag on Master | Description |
 |----------------------------|-------------|
 | 1.0.0                      | First release version providing basic functionality |
-| 1.1.0                      | Added `query_for_error_after_interrupt(...)` function and removed custom (experimental) resource tracker |
+| 2.0.0                      | Added `query_for_error_after_interrupt(...)` function and removed custom (experimental) resource tracker |
 
 
 ---
