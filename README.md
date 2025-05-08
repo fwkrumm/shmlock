@@ -8,6 +8,7 @@
 - [Quick Dive](#quick-dive)
 - [Examples](#examples)
 - [Troubleshooting and Known Issues](#troubleshooting-and-known-issues)
+- [Version History](#version-history)
 - [ToDos](#todos)
 
 
@@ -42,8 +43,9 @@ So if you chose to use this module it is best to keep the number of synchronized
 
 This module itself has no additional dependencies. There are multiple ways to install this module:
 
-1. Install directly from the repository:
+1. Install directly from the repository; cf. [Version history](#version-history) :
 `pip install git+https://github.com/NotAvailable-EUR/shmlock@1.0.0`
+`pip install git+https://github.com/NotAvailable-EUR/shmlock@1.1.0`
 
 2. Clone this repository and install it from the local files via pip:
     ```
@@ -233,7 +235,7 @@ This file is very similar to `run_perf.py`; however, it focuses solely on `shmlo
 
 ### Resource Tracking
 
-For Python 3.13 and later versions, there is an additional parameter for `SharedMemory(..., track: bool = True)` which disables the shared memory tracking that causes the following tracking issues. Adding this parameter to the lock is still a pending task.
+For Python 3.13 and later versions, there is an additional parameter for `SharedMemory(..., track: bool = True)` which disables the shared memory tracking that causes the following tracking issues.
 
 On POSIX systems, the `resource_tracker` will likely complain that either `shared_memory` instances were not found or spam `KeyErrors`. This issue is known:
 
@@ -257,11 +259,35 @@ lock2 = shmlock.ShmLock("whatsoever" + lock_pattern)
 
 This also seems to slightly increase the performance on POSIX systems.
 
-Usually, each lock should be released properly.
-Additionally, there is an experimental custom resource tracker; see the following section.
-
+Usually, each lock should be released properly. One problem however is if the process is
+interrupted abruptly (SIGINT/SIGTERM) which might cause issues. For details see the following Subsection.
 
 Please note that with Python version 3.13, there will be a "track" parameter for shared memory block creation, which can be used to disable tracking. I am aware of this and will use it at some point in the future.
+
+### Process Interrupt (SIGINT/SIGTERM)
+
+One potential issue arises if a process is terminated—such as through a `KeyboardInterrupt`—during the creation of shared memory (i.e., inside `shared_memory.SharedMemory(...)`). On Linux, this can lead to unintended outcomes, such as the shared memory mmap file being created with a size of zero or a shared memory block being allocated without an object reference being returned. In such cases, neither `close()` nor `unlink()` can be properly called.
+
+Since detecting this scenario is not trivial, the function `query_for_error_after_interrupt(...)` helps to handle such cases:
+
+
+```python
+
+lock = shmlock.ShmLock("lock_name")
+lock.query_for_error_after_interrupt()
+
+```
+
+If the shared memory is in an inconsistent state—such as being created but unused—the function raises an exception. Otherwise, if everything is functioning correctly, it simply returns `None`. For further details, refer to the function's doc-string.
+
+---
+<a name="version-history"></a>
+## Version History
+
+| Version / Git Tag on Master | Description |
+|----------------------------|-------------|
+| 1.0.0                      | First release version providing basic functionality |
+| 1.1.0                      | Added `query_for_error_after_interrupt(...)` function and removed custom (experimental) resource tracker |
 
 
 ---
@@ -270,5 +296,3 @@ Please note that with Python version 3.13, there will be a "track" parameter for
 
 - achieve 100% code coverage
 - upload to PyPI
-- implement safeguards to prevent the resource tracker from being shared among processes
-- test for track parameter for python version >= 3.13
