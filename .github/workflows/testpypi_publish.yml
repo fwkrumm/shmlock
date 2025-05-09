@@ -27,7 +27,8 @@ jobs:
         run: python -m build
 
       - name: Publish to TestPyPI
-        run: twine upload --repository testpypi dist/* || echo "Warning: Upload failed, possibly because the version already exists."
+        run: |
+          twine upload --repository testpypi dist/* || echo "Warning: Upload failed, possibly because the version already exists."
         continue-on-error: true
         env:
           TWINE_USERNAME: __token__
