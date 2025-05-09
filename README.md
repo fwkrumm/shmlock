@@ -14,6 +14,7 @@
 
 ---
 <a name="about"></a>
+<a id="about"></a>
 ## About
 
 Feel free to provide constructive feedback, suggestions, or feature requests. Thank you.
@@ -24,6 +25,7 @@ Its underlying mechanism uses the multiprocessing.shared_memory module.
 
 ---
 <a name="pros-and-cons-when-to-use-this-module-and-when-not-to"></a>
+<a id="pros-and-cons-when-to-use-this-module-and-when-not-to"></a>
 ## Pros and Cons: When to Use This Module and When Not To
 
 | When to Use | When Not to Use |
@@ -38,16 +40,17 @@ So if you chose to use this module it is best to keep the number of synchronized
 
 ---
 <a name="installation"></a>
+<a id="installation"></a>
 ## Installation
 
 This module itself has no additional dependencies. There are multiple ways to install this module:
 
 1. Install directly from the repository:
-`pip install git+https://github.com/NotAvailable-EUR/shmlock@1.0.0`
+`pip install git+https://github.com/fwkrumm/shmlock@1.0.0`
 
 2. Clone this repository and install it from the local files via pip:
     ```
-    git clone https:/github.com/NotAvailable-EUR/shmlock
+    git clone https://github.com/fwkrumm/shmlock
     cd shmlock
     pip install . -r requirements.txt
     ```
@@ -56,6 +59,7 @@ This module itself has no additional dependencies. There are multiple ways to in
 
 ---
 <a name="quick-dive"></a>
+<a id="quick-dive"></a>
 ## Quick Dive
 
 For further examples please check out the [Examples](#examples) section.
@@ -115,6 +119,7 @@ with lock(timeout=1, throw=True):
 
 ---
 <a name="examples"></a>
+<a id="examples"></a>
 ## Examples
 
 There are examples that demonstrate the usage in more detail. Note that the requirements from the `requirements.txt` file are required for some of the examples.
@@ -227,7 +232,7 @@ This file is very similar to `run_perf.py`; however, it focuses solely on `shmlo
 
 
 ---
-<a name="troubleshooting-and-known-issues"></a>
+<a id="troubleshooting-and-known-issues"></a>
 ## Troubleshooting and Known Issues
 
 
@@ -299,6 +304,7 @@ shmlock.de_init_custom_resource_tracking_without_clean_up()
 
 ---
 <a name="todos"></a>
+<a id="todos"></a>
 ## ToDos
 
 - achieve 100% code coverage
