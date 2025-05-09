@@ -28,7 +28,7 @@ jobs:
 
       - name: Publish to TestPyPI
         run: |
-          twine upload --repository testpypi dist/* || { echo "::error:: ❌ Error: Upload failed, possibly because the version already exists."; exit 1; }
+          twine upload --repository testpypi dist/* || { echo "::error:: ❌ Error: Upload failed. Possibly because the version already exists."; exit 1; }
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.TESTPYPI_API_TOKEN_ENV }}
