@@ -171,7 +171,9 @@ class ShmLock(ShmModuleBaseLogger):
             This is parameter only supported for python >= 3.13 in SharedMemory
             class, by default None
         """
-        self._shm = None # make sure to initialize _shm at the beginning since otherwise
+        self._shm = threading.local()
+
+        self._shm.shm = None # make sure to initialize _shm at the beginning since otherwise
                          # an AttributeError might occur during destructor if init does not
                          # succeed
 
@@ -367,7 +369,7 @@ class ShmLock(ShmModuleBaseLogger):
                              "acquire lock %s. This might lead to leaking resources. "\
                              "shared memory variable is %s",
                              self,
-                             self._shm)
+                             self._shm.shm)
 
 
                 # raise keyboardinterrupt to stop the process; release() will clean up.
@@ -391,35 +393,42 @@ class ShmLock(ShmModuleBaseLogger):
         FileExistsError
             if shared memory block already exists i.e. the lock is already acquired
         """
-        if self._shm is not None:
+        if getattr(self._shm, "shm", None) is not None:
+            # this thread already acquired the lock
+            # check that the uuid matches (otherwise something is very wrong)
+            if self._shm.shm.buf[:LOCK_SHM_SIZE] == self._config.uuid.uuid_bytes:
+                return True
+            # uuid does not match but seemingly this thread has (somehow) acquired the lock
+            # this should not happen!
             raise exceptions.ShmLockRuntimeError("lock already acquired (Deadlock); "\
                                 "release it first via .release() function. "\
                                 "Alternatively, you are using the same lock instances "\
                                 "among different threads. Do not do that. If you must: "\
                                 "Each thread should use its own lock!")
+
         if self._config.track is not None:
             # disable unexpected keyword argument warning because track parameter is only
             # supported for python >= 3.13. We check that in the constructor however
             # pylint still reports it. There might be a better way to handle this?
-            self._shm = shared_memory.SharedMemory(name=self._config.name, # pylint:disable=(unexpected-keyword-arg)
+            self._shm.shm = shared_memory.SharedMemory(name=self._config.name, # pylint:disable=(unexpected-keyword-arg)
                                                     create=True,
                                                     size=LOCK_SHM_SIZE,
                                                     track=self._config.track)
         else:
-            self._shm = shared_memory.SharedMemory(name=self._config.name,
+            self._shm.shm = shared_memory.SharedMemory(name=self._config.name,
                                                     create=True,
                                                     size=LOCK_SHM_SIZE)
 
         # NOTE: shared memory is after creation(!) not filled with the uuid data in
         # the same operation. so it MIGHT be possible that the shm block has been
         # created but not filled with the uuid data so it would be empty.
-        self._shm.buf[:LOCK_SHM_SIZE] = self._config.uuid.uuid_bytes
+        self._shm.shm.buf[:LOCK_SHM_SIZE] = self._config.uuid.uuid_bytes
 
         self.debug("lock %s acquired", self)
 
-        # are there any branches without keyboard interrupt which might lead to self._shm
+        # are there any branches without keyboard interrupt which might lead to self._shm.shm
         # still being None but shared memory being created?
-        assert self._shm is not None, "self._shm is None without exception being raised. "\
+        assert self._shm.shm is not None, "self._shm.shm is None without exception being raised. "\
             "This should not happen!"
 
         return True
@@ -468,7 +477,7 @@ class ShmLock(ShmModuleBaseLogger):
 
         """
 
-        if self._shm is not None:
+        if self._shm.shm is not None:
             raise exceptions.ShmLockRuntimeError(f"Lock {self} is currently acquired. This "\
                 "function checks for dangling shared memory after shared memory creation had "\
                 "been interrupted. release lock first.")
@@ -503,10 +512,10 @@ class ShmLock(ShmModuleBaseLogger):
                         continue
 
                     # check that this lock instance did not acquire the lock. this should
-                    # not be possible with self._shm being None
+                    # not be possible with self._shm.shm being None
                     assert shm.buf[:LOCK_SHM_SIZE] != self._config.uuid.uuid_bytes, \
                         "the buffer should not be equal to the uuid of the lock "\
-                        f"{str(self)} since self._shm is None and so the uid should "\
+                        f"{str(self)} since self._shm.shm is None and so the uid should "\
                         "not have been set!"
 
                     # some other process has acquired the lock. this instance can die now.
@@ -561,11 +570,11 @@ class ShmLock(ShmModuleBaseLogger):
         RuntimeError
             if the lock could not be released properly
         """
-        if self._shm is not None:
+        if getattr(self._shm, "shm", None) is not None:
             try:
-                self._shm.close()
-                self._shm.unlink()
-                self._shm = None
+                self._shm.shm.close()
+                self._shm.shm.unlink()
+                self._shm.shm = None
                 self.debug("lock %s released", self)
                 return True
             except FileNotFoundError:
@@ -598,7 +607,7 @@ class ShmLock(ShmModuleBaseLogger):
         """
         check if lock is acquired
         """
-        return self._shm is not None
+        return self._shm.shm is not None
 
     @property
     def name(self) -> str:
