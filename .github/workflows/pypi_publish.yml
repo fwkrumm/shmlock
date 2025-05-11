@@ -3,11 +3,11 @@ name: Publish PyPI
 on:
   push:
     branches:
-      - master
+      - XXX
 
 jobs:
   build:
-    environment: pypi-test-release
+    environment: pypi-release
     runs-on: ubuntu-latest
 
     steps:
