@@ -296,3 +296,4 @@ If the shared memory is in an inconsistent state—such as being created but unu
 
 - achieve 100% code coverage
 - upload to PyPI
+- reentrancy tests
