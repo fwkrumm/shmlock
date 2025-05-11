@@ -73,8 +73,8 @@ class BasicsTest(unittest.TestCase):
         lock2 = shmlock.ShmLock(shm_name)
         self.assertFalse(lock2.acquire(timeout=1)) # acquired by other lock
 
-        self.assertTrue(lock.release()) # relase should be successful
-        self.assertTrue(lock2.acquire()) # not should be acquireable
+        self.assertTrue(lock.release()) # release should be successful
+        self.assertTrue(lock2.acquire()) # lock should not be acquirable
 
         self.assertTrue(lock2.release()) # check successful release
 
