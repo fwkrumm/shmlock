@@ -397,6 +397,7 @@ class ShmLock(ShmModuleBaseLogger):
             # this thread already acquired the lock
             # check that the uuid matches (otherwise something is very wrong)
             if self._shm.shm.buf[:LOCK_SHM_SIZE] == self._config.uuid.uuid_bytes:
+                self.debug("lock %s already acquired by this thread", self)
                 return True
             # uuid does not match but seemingly this thread has (somehow) acquired the lock
             # this should not happen!

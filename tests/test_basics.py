@@ -66,8 +66,9 @@ class BasicsTest(unittest.TestCase):
         lock = shmlock.ShmLock(shm_name)
 
         self.assertTrue(lock.acquire())
-        with self.assertRaises(shmlock.shmlock_exceptions.ShmLockRuntimeError):
-            lock.acquire() # already acquired for this lockect
+
+        # due to reentrant lock, this should not block and also return True
+        self.assertTrue(lock.acquire())
 
         lock2 = shmlock.ShmLock(shm_name)
         self.assertFalse(lock2.acquire(timeout=1)) # acquired by other lock
