@@ -217,6 +217,9 @@ class ShmLock(ShmModuleBaseLogger):
             # None means infinite wait
             try:
                 if self._shm is not None:
+                    # for enable reentry of the lock:
+                    #  -> check that uid matches and return True
+                    #  -> if uid does not match or is None -> raise RuntimeError
                     raise RuntimeError("lock already acquired; "\
                                        "release it first via .release() function. "\
                                        "Alternatively, you are using the same lock instances "\
