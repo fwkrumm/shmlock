@@ -171,11 +171,7 @@ class ShmLock(ShmModuleBaseLogger):
             This is parameter only supported for python >= 3.13 in SharedMemory
             class, by default None
         """
-        self._shm = threading.local()
-
-        self._shm.shm = None # make sure to initialize _shm at the beginning since otherwise
-                         # an AttributeError might occur during destructor if init does not
-                         # succeed
+        self._shm = threading.local() # will contain shared memory reference and counter
 
         # type checks
         if (not isinstance(poll_interval, float) and \
@@ -369,7 +365,7 @@ class ShmLock(ShmModuleBaseLogger):
                              "acquire lock %s. This might lead to leaking resources. "\
                              "shared memory variable is %s",
                              self,
-                             self._shm.shm)
+                             getattr(self._shm, "shm", None))
 
 
                 # raise keyboardinterrupt to stop the process; release() will clean up.
@@ -396,17 +392,19 @@ class ShmLock(ShmModuleBaseLogger):
         if getattr(self._shm, "shm", None) is not None:
             # this thread already acquired the lock
             # check that the uuid matches (otherwise something is very wrong)
-            if self._shm.shm.buf[:LOCK_SHM_SIZE] == self._config.uuid.uuid_bytes:
-                self.debug("lock %s already acquired by this thread", self)
+            if getattr(self._shm, "counter", 0) > 0 and \
+                self._shm.shm.buf[:LOCK_SHM_SIZE] == self._config.uuid.uuid_bytes:
+                self._shm.counter += 1
+                self.debug("lock %s already acquired by this thread. Counter %s",
+                           self,
+                           self._shm.counter)
                 return True
             # uuid does not match but seemingly this thread has (somehow) acquired the lock
             # this should not happen!
-            raise exceptions.ShmLockRuntimeError("lock already acquired (Deadlock); "\
-                                "release it first via .release() function. "\
-                                "Alternatively, you are using the same lock instances "\
-                                "among different threads. Do not do that. If you must: "\
-                                "Each thread should use its own lock!")
-
+            raise exceptions.ShmLockRuntimeError(f"lock {self} seemingly already acquired by "\
+                f"this thread but uuid does not match (expected {self._config.uuid}, "\
+                f"got {self._shm.shm.buf[:LOCK_SHM_SIZE]}) or the counter is zero "\
+                f"({self._shm.counter}). This should not happen!")
         if self._config.track is not None:
             # disable unexpected keyword argument warning because track parameter is only
             # supported for python >= 3.13. We check that in the constructor however
@@ -425,6 +423,13 @@ class ShmLock(ShmModuleBaseLogger):
         # created but not filled with the uuid data so it would be empty.
         self._shm.shm.buf[:LOCK_SHM_SIZE] = self._config.uuid.uuid_bytes
 
+        if getattr(self._shm, "counter", 0) > 0:
+            # since the counter exists per thread and if the thread is running it should not be
+            # possible that the counter is > 0 if we just acquired the lock
+            raise exceptions.ShmLockRuntimeError(f"lock counter for lock {self} is > 0 at lock "\
+                f"acquirement ({self._shm.counter}). This should not be possible!")
+
+        self._shm.counter = 1
         self.debug("lock %s acquired", self)
 
         # are there any branches without keyboard interrupt which might lead to self._shm.shm
@@ -571,7 +576,13 @@ class ShmLock(ShmModuleBaseLogger):
         RuntimeError
             if the lock could not be released properly
         """
-        if getattr(self._shm, "shm", None) is not None:
+        if getattr(self._shm, "counter", 0) == 0:
+            raise exceptions.ShmLockRuntimeError(f"release() called for lock {self} "\
+                "but lock has not been acquired before. Are you releasing from another thread?")
+        self._shm.counter -= 1
+        if getattr(self._shm, "shm", None) is not None and self._shm.counter == 0:
+            # only release if shared memory reference has been set and counter reached 0.
+            # This prevents that release of nested with s: with s: with s: ... blocks.
             try:
                 self._shm.shm.close()
                 self._shm.shm.unlink()
@@ -602,6 +613,13 @@ class ShmLock(ShmModuleBaseLogger):
             if self in self.__class__.instances:
                 self.__class__.instances.remove(self)
                 self.debug("instance %s removed from reference list.", self)
+
+    @property
+    def locked(self) -> bool:
+        """
+        check if lock is acquired (alternative api)
+        """
+        return self._shm.shm is not None
 
     @property
     def acquired(self) -> bool:
@@ -665,7 +683,7 @@ class ShmLock(ShmModuleBaseLogger):
         """
         return self._config.exit_event
 
-    def get_uuid_of_locking_lock(self) -> str | None:
+    def debug_get_uuid_of_locking_lock(self) -> str | None:
         """
         get uuid of the locking lock
 
