@@ -45,10 +45,16 @@ So if you chose to use this module it is best to keep the number of synchronized
 
 This module itself has no additional dependencies. There are multiple ways to install this module:
 
-1. Install directly from the repository:
-`pip install git+https://github.com/fwkrumm/shmlock@1.0.0`
+1. From Python Package Index:
+`pip install shmlock`
 
-2. Clone this repository and install it from the local files via pip:
+2. Install directly from the repository:
+`pip install git+https://github.com/fwkrumm/shmlock@master`
+for latest version or
+`pip install git+https://github.com/fwkrumm/shmlock@1.0.0`
+for a specific version.
+
+3. Clone this repository and install it from the local files via pip:
     ```
     git clone https://github.com/fwkrumm/shmlock
     cd shmlock
