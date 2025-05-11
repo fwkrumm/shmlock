@@ -55,8 +55,23 @@ class BasicsTest(unittest.TestCase):
         self.assertRaises(RuntimeError, test_func)
         try:
             self.assertTrue(lock.acquire()) # lock should be acquired again
-        finally:                              # i.e. shm should not be blocked
+        finally:                            # i.e. shm should not be blocked
             lock.release()
+
+    def test_reentrant_lock(self):
+        """
+        test that the lock is reentrant
+        """
+        shm_name = str(time.time())
+        lock = shmlock.ShmLock(shm_name)
+
+        with lock: # __enter__
+            with lock.lock(): # contextmanager
+                # this should not block
+                pass
+            self.assertTrue(lock.acquired)
+
+        self.assertFalse(lock.acquired) # lock should be released now
 
     def test_lock_release(self):
         """

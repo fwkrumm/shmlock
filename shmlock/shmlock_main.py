@@ -172,6 +172,7 @@ class ShmLock(ShmModuleBaseLogger):
             class, by default None
         """
         self._shm = threading.local() # will contain shared memory reference and counter
+        super().__init__(logger=logger)
 
         # type checks
         if (not isinstance(poll_interval, float) and \
@@ -185,8 +186,6 @@ class ShmLock(ShmModuleBaseLogger):
 
         if not lock_name:
             raise exceptions.ShmLockValueError("lock_name must not be empty")
-
-        super().__init__(logger=logger)
 
         # create config containing all parameters
         self._config = ShmLockConfig(name=lock_name,
@@ -573,7 +572,10 @@ class ShmLock(ShmModuleBaseLogger):
         """
         # decrement counter (default it to 1 in ase lock has never been acquired before so
         # that counter never becomes negative)
-        self._shm.counter = getattr(self._shm, "counter", 1) - 1
+        self._shm.counter = max(getattr(self._shm, "counter", 1) - 1, 0)
+        self.debug("lock %s decremented counter to %d",
+                   self,
+                   self._shm.counter)
 
         if getattr(self._shm, "shm", None) is not None and self._shm.counter == 0:
             # only release if shared memory reference has been set and counter reached 0.

@@ -21,6 +21,8 @@ class ShmModuleBaseLogger:
         logger : logging.Logger, optional
             logger to be used, by default None
         """
+        self._logger = None
+
         if logger is not None and not isinstance(logger, logging.Logger):
             raise ShmLockValueError("logger must be of type logging.Logger, "\
                 f"instead got {type(logger)}")
