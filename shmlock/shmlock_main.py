@@ -571,7 +571,8 @@ class ShmLock(ShmModuleBaseLogger):
             if the lock could not be released properly
         """
         # decrement counter (default it to 1 in ase lock has never been acquired before so
-        # that counter never becomes negative)
+        # that counter never becomes negative); this would otherwise happen if one would
+        # (for whatever reason) call release() multiple times without acquiring the lock
         self._shm.counter = max(getattr(self._shm, "counter", 1) - 1, 0)
         self.debug("lock %s decremented counter to %d",
                    self,
