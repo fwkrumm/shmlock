@@ -15,6 +15,7 @@
 
 ---
 <a name="about"></a>
+<a id="about"></a>
 ## About
 
 Feel free to provide constructive feedback, suggestions, or feature requests. Thank you.
@@ -25,6 +26,7 @@ Its underlying mechanism uses the multiprocessing.shared_memory module.
 
 ---
 <a name="pros-and-cons-when-to-use-this-module-and-when-not-to"></a>
+<a id="pros-and-cons-when-to-use-this-module-and-when-not-to"></a>
 ## Pros and Cons: When to Use This Module and When Not To
 
 | When to Use | When Not to Use |
@@ -32,24 +34,32 @@ Its underlying mechanism uses the multiprocessing.shared_memory module.
 | You want a lock without passing lock objects around | You do not want a lock that uses a polling interval (i.e. a sleep interval) |
 | You need a simple locking mechanism | You require very high performance and a large number of acquisitions |
 | You want to avoid file-based or server-client-based locks (like filelock, Redis, pyzmq, etc.) | You are not comfortable using shared memory as a lock mechanism |
-| You do not want the lock to add dependencies to your project |  |
+| You do not want the lock to add dependencies to your project | You need reentrancy  |
 
 
 So if you chose to use this module it is best to keep the number of synchronized accesses not too high.
 
 ---
 <a name="installation"></a>
+<a id="installation"></a>
 ## Installation
 
 This module itself has no additional dependencies. There are multiple ways to install this module:
 
-1. Install directly from the repository; cf. [Version history](#version-history) :
-`pip install git+https://github.com/NotAvailable-EUR/shmlock@1.0.0`
-`pip install git+https://github.com/NotAvailable-EUR/shmlock@2.0.0`
+1. (Coming Soon) From Python Package Index:
+`pip install shmlock`
 
-2. Clone this repository and install it from the local files via pip:
+2. Install directly from the repository:
+`pip install git+https://github.com/fwkrumm/shmlock@master`
+for latest version or
+```
+pip install git+https://github.com/fwkrumm/shmlock@X.Y.Z
+```
+for a specific version; cf. Section [Version History](#version-history).
+
+3. Clone this repository and install it from the local files via pip:
     ```
-    git clone https:/github.com/NotAvailable-EUR/shmlock
+    git clone https://github.com/fwkrumm/shmlock
     cd shmlock
     pip install . -r requirements.txt
     ```
@@ -58,6 +68,7 @@ This module itself has no additional dependencies. There are multiple ways to in
 
 ---
 <a name="quick-dive"></a>
+<a id="quick-dive"></a>
 ## Quick Dive
 
 For further examples please check out the [Examples](#examples) section.
@@ -117,6 +128,7 @@ with lock(timeout=1, throw=True):
 
 ---
 <a name="examples"></a>
+<a id="examples"></a>
 ## Examples
 
 There are examples that demonstrate the usage in more detail. Note that the requirements from the `requirements.txt` file are required for some of the examples.
@@ -229,7 +241,7 @@ This file is very similar to `run_perf.py`; however, it focuses solely on `shmlo
 
 
 ---
-<a name="troubleshooting-and-known-issues"></a>
+<a id="troubleshooting-and-known-issues"></a>
 ## Troubleshooting and Known Issues
 
 
@@ -266,7 +278,7 @@ Please note that with Python version 3.13, there will be a "track" parameter for
 
 ### Process Interrupt (SIGINT/SIGTERM)
 
-One potential issue arises if a process is terminated—such as through a `KeyboardInterrupt`—during the creation of shared memory (i.e., inside `shared_memory.SharedMemory(...)`). On Linux, this can lead to unintended outcomes, such as the shared memory mmap file being created with a size of zero or a shared memory block being allocated without an object reference being returned. In such cases, neither `close()` nor `unlink()` can be properly called.
+One potential issue arises if a process is terminated�such as through a `KeyboardInterrupt`�during the creation of shared memory (i.e., inside `shared_memory.SharedMemory(...)`). On Linux, this can lead to unintended outcomes, such as the shared memory mmap file being created with a size of zero or a shared memory block being allocated without an object reference being returned. In such cases, neither `close()` nor `unlink()` can be properly called.
 
 Since detecting this scenario is not trivial, the function `query_for_error_after_interrupt(...)` helps to handle such cases:
 
@@ -278,7 +290,7 @@ lock.query_for_error_after_interrupt()
 
 ```
 
-If the shared memory is in an inconsistent state—such as being created but unused—the function raises an exception. Otherwise, if everything is functioning correctly, it simply returns `None`. For further details, refer to the function's doc-string.
+If the shared memory is in an inconsistent state�such as being created but unused�the function raises an exception. Otherwise, if everything is functioning correctly, it simply returns `None`. For further details, refer to the function's doc-string.
 
 ---
 <a name="version-history"></a>
@@ -287,12 +299,16 @@ If the shared memory is in an inconsistent state—such as being created but unu
 | Version / Git Tag on Master | Description |
 |----------------------------|-------------|
 | 1.0.0                      | First release version providing basic functionality |
+| 1.1.0                      | Add pypi workflow; minor corrections |
 | 2.0.0                      | Added `query_for_error_after_interrupt(...)` function and removed custom (experimental) resource tracker |
 
 
 ---
 <a name="todos"></a>
+<a id="todos"></a>
 ## ToDos
 
 - achieve 100% code coverage
+- add reentrancy
 - upload to PyPI
+

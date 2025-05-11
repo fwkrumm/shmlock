@@ -392,6 +392,9 @@ class ShmLock(ShmModuleBaseLogger):
             if shared memory block already exists i.e. the lock is already acquired
         """
         if self._shm is not None:
+            # for enable reentry of the lock:
+            #  -> check that uid matches and return True
+            #  -> if uid does not match or is None -> raise RuntimeError
             raise exceptions.ShmLockRuntimeError("lock already acquired (Deadlock); "\
                                 "release it first via .release() function. "\
                                 "Alternatively, you are using the same lock instances "\
