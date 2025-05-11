@@ -33,7 +33,7 @@ Its underlying mechanism uses the multiprocessing.shared_memory module.
 | You want a lock without passing lock objects around | You do not want a lock that uses a polling interval (i.e. a sleep interval) |
 | You need a simple locking mechanism | You require very high performance and a large number of acquisitions |
 | You want to avoid file-based or server-client-based locks (like filelock, Redis, pyzmq, etc.) | You are not comfortable using shared memory as a lock mechanism |
-| You do not want the lock to add dependencies to your project |  |
+| You do not want the lock to add dependencies to your project | You need a re-entrant lock  |
 
 
 So if you chose to use this module it is best to keep the number of synchronized accesses not too high.
