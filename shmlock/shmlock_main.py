@@ -5,7 +5,6 @@ If possible never terminate this process using ctrl+c or similar. This can lead 
 shared memory blocks. Best practice is to use the exit event to stop the lock from acquirement.
 """
 import os
-import uuid
 import time
 import sys
 import threading
@@ -27,67 +26,9 @@ __all__ = ["ShmLock",
 import  shmlock.shmlock_exceptions as exceptions
 from shmlock.shmlock_monkey_patch import remove_shm_from_resource_tracker
 from shmlock.shmlock_base_logger import ShmModuleBaseLogger
+from shmlock.shmlock_uuid import ShmUuid
 
 LOCK_SHM_SIZE = 16 # size of the shared memory block in bytes to store uuid
-
-# to-do: to own class
-class ShmUuid:
-    """
-    data class to store the uuid of the lock
-    """
-
-    def __init__(self):
-        self.uuid_ = uuid.uuid4()
-        self.uuid_bytes = self.uuid_.bytes
-        self.uuid_str = str(self.uuid_)
-
-    def __repr__(self):
-        return f"ShmUuid(uuid={self.uuid_})"
-
-    @staticmethod
-    def byte_to_string(byte_repr: bytes) -> str:
-        """
-        convert byte representation of uuid to string representation
-
-        Parameters
-        ----------
-        byte_repr : bytes
-            byte representation of uuid
-
-        Returns
-        -------
-        str
-            string representation of uuid
-        """
-        return str(uuid.UUID(bytes=byte_repr))
-
-    @staticmethod
-    def string_to_bytes(uuid_str: str) -> bytes:
-        """
-        convert string representation of uuid to byte representation
-
-        Parameters
-        ----------
-        uuid_str : str
-            string representation of uuid
-
-        Returns
-        -------
-        bytes
-            byte representation of uuid
-        """
-        return uuid.UUID(uuid_str).bytes
-
-    def __str__(self):
-        """
-        string representation of the uuid
-
-        Returns
-        -------
-        str
-            string representation of the uuid
-        """
-        return self.uuid_str
 
 @dataclass
 class ShmLockConfig(): # pylint: disable=(too-many-instance-attributes)

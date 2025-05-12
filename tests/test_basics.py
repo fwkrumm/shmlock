@@ -7,6 +7,7 @@ import unittest
 import logging
 import shmlock
 import shmlock.shmlock_exceptions
+from shmlock.shmlock_uuid import ShmUuid
 
 class BasicsTest(unittest.TestCase):
     """
@@ -46,6 +47,9 @@ class BasicsTest(unittest.TestCase):
 
 
     def test_lock_with_exception(self):
+        """
+        test that lock is released even if an exception is raised
+        """
         shm_name = str(time.time())
         lock = shmlock.ShmLock(shm_name)
 
@@ -125,6 +129,7 @@ class BasicsTest(unittest.TestCase):
         lock = shmlock.ShmLock(shm_name)
 
         logger = logging.getLogger("test_logger")
+        logger.setLevel(logging.NOTSET)
 
         for log in (logger, None,):
             lock = shmlock.ShmLock(shm_name, logger=log)
@@ -138,6 +143,26 @@ class BasicsTest(unittest.TestCase):
             lock.exception("test exception")
             lock.critical("test critical")
 
+    def test_repr(self):
+        """
+        test the repr method
+        """
+        shm_name = str(time.time())
+        lock = shmlock.ShmLock(shm_name)
+
+        # check that the repr method does not throw an exception
+        self.assertIsNotNone(repr(lock))
+
+    def test_uuid_methods(self):
+        """
+        test uuid conversion methods and representation method existence
+        """
+        uuid = ShmUuid()
+        uuid_bytes = uuid.uuid_bytes
+        uuid_str = uuid.uuid_str
+        self.assertEqual(uuid_bytes, ShmUuid.string_to_bytes(uuid_str))
+        self.assertEqual(uuid_str, ShmUuid.byte_to_string(uuid_bytes))
+        self.assertIsNotNone(repr(uuid))
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
