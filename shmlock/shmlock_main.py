@@ -528,6 +528,12 @@ class ShmLock(ShmModuleBaseLogger):
         RuntimeError
             if the lock could not be released properly
         """
+
+        if getattr(self._shm, "counter", 0) > 0:
+            # for example if you try to release lock within context manager
+            raise exceptions.ShmLockRuntimeError(f"lock {self} is still acquired by this "\
+                "thread via contextmanager.")
+
         if getattr(self._shm, "shm", None) is not None:
             # only release if shared memory reference has been set and counter reached 0.
             # This prevents that release of nested with s: with s: with s: ... blocks.

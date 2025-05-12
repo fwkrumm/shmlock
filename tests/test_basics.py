@@ -160,8 +160,8 @@ class BasicsTest(unittest.TestCase):
         self.assertEqual(lock.debug_get_uuid_of_locking_lock(), lock.uuid)
 
         # switch acquiring locks
-        lock.release()
-        lock2.acquire()
+        self.assertTrue(lock.release())
+        self.assertTrue(lock2.acquire())
 
         # check that the uuid of lock2 is returned
         self.assertEqual(lock2.debug_get_uuid_of_locking_lock(), lock2.uuid)
@@ -183,13 +183,13 @@ class BasicsTest(unittest.TestCase):
             lock = shmlock.ShmLock(shm_name, logger=log)
 
             # just check that they do not throw exceptions if no logger is set and with logger
-            lock.info("test info")
-            lock.debug("test debug")
-            lock.warning("test warning")
-            lock.warn("test warn")
-            lock.error("test error")
-            lock.exception("test exception")
-            lock.critical("test critical")
+            lock.info("base logger test info")
+            lock.debug("base logger test debug")
+            lock.warning("base logger test warning")
+            lock.warn("base logger test warn")
+            lock.error("base logger test error")
+            lock.exception("base logger test exception")
+            lock.critical("base logger test critical")
 
     def test_repr(self):
         """
@@ -211,6 +211,21 @@ class BasicsTest(unittest.TestCase):
         self.assertEqual(uuid_bytes, ShmUuid.string_to_bytes(uuid_str))
         self.assertEqual(uuid_str, ShmUuid.byte_to_string(uuid_bytes))
         self.assertIsNotNone(repr(uuid))
+
+    def test_exceptions_at_releast_within_contextmanager(self):
+        """
+        test that exceptions are raised if release is called within the context manager
+        """
+        shm_name = str(time.time())
+        lock = shmlock.ShmLock(shm_name)
+
+        with self.assertRaises(shmlock.shmlock_exceptions.ShmLockRuntimeError):
+            with lock.lock():
+                lock.release()
+
+        with self.assertRaises(shmlock.shmlock_exceptions.ShmLockRuntimeError):
+            with lock:
+                lock.release()
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
