@@ -308,7 +308,5 @@ If the shared memory is in an inconsistent state�such as being created but unu
 <a id="todos"></a>
 ## ToDos
 
-- achieve 100% code coverage
-- add reentrancy
-- upload to PyPI
-
+- add reentrancy (WIP)
+- upload to PyPI (WIP)
