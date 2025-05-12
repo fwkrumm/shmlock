@@ -45,6 +45,18 @@ class BasicsTest(unittest.TestCase):
         finally:
             lock2.release()
 
+    def test_properties(self):
+        """
+        test some properties
+        """
+        shm_name = str(time.time())
+        lock = shmlock.ShmLock(shm_name)
+
+        self.assertTrue(lock.acquire())
+        self.assertTrue(lock.acquired)
+
+        lock.description = "test description"
+        self.assertEqual(lock.description, "test description")
 
     def test_lock_with_exception(self):
         """
@@ -123,6 +135,9 @@ class BasicsTest(unittest.TestCase):
         shm_name = str(time.time())
         lock = shmlock.ShmLock(shm_name)
         lock2 = shmlock.ShmLock(shm_name)
+
+        # no shm acquired yet
+        self.assertIsNone(lock.get_uuid_of_locking_lock())
 
         # check that the uuid of the first lock is returned
         self.assertTrue(lock.acquire())

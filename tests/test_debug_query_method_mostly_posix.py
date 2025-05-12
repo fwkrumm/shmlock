@@ -100,6 +100,20 @@ class LinuxPosixTests(unittest.TestCase):
                 # acquired locks are seemingly working fine
                 l.query_for_error_after_interrupt()
 
+    def test_query_function(self):
+        """
+        test that query for error raises an exception if lock is acquired
+        """
+        l1 = shmlock.ShmLock(self._shm_name)
+        l2 = shmlock.ShmLock(self._shm_name)
+
+        # acquire lock
+        l1.acquire()
+
+        # l2 should now cleanly proceed and not throw anything
+        l2.query_for_error_after_interrupt()
+
+
     def test_error_function_if_all_is_fine(self):
         """
         test that query for error does not raise an exception if all is fine and returns None

@@ -1,9 +1,11 @@
 """
 init tests of shmlock package
 """
+import multiprocessing.synchronize
 import sys
 import time
 import unittest
+import multiprocessing
 from multiprocessing import shared_memory
 import shmlock
 import shmlock.shmlock_exceptions
@@ -35,6 +37,9 @@ class InitTest(unittest.TestCase):
         self.assertEqual(obj.poll_interval, 1)
         # internally should be a float
         self.assertTrue(isinstance(obj.poll_interval, float))
+        # exit event should be automatically assigned
+        self.assertTrue(isinstance(obj.get_exit_event(), multiprocessing.synchronize.Event))
+
         del obj
         # shared memory should be deleted thus attaching should fail
         with self.assertRaises(FileNotFoundError):
@@ -86,6 +91,28 @@ class InitTest(unittest.TestCase):
         """
         with self.assertRaises(shmlock.shmlock_exceptions.ShmLockValueError):
             shmlock.ShmLock("")
+
+    def test_instance_list(self):
+        """
+        test if instance list is correct
+        """
+
+        # create 3 instances of ShmLock. NOTE that the instances are added thread-wide
+        # independent of uuid
+        shm_name_1 = str(time.time_ns())
+        shm_name_2 = str(time.time_ns())
+        shm_name_3 = str(time.time_ns())
+        l1 = shmlock.ShmLock(shm_name_1)
+        l2 = shmlock.ShmLock(shm_name_2)
+        l3 = shmlock.ShmLock(shm_name_3)
+
+        list_instances = shmlock.ShmLock.list_instances()
+        self.assertEqual(len(list_instances), 3)
+
+        del l1
+        del l2
+        del l3
+
 
     @unittest.skipUnless(sys.version_info < (3, 13), "test only for lower python versions")
     def test_track_for_too_low_version(self):

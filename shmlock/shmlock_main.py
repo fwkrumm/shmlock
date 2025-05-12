@@ -451,10 +451,10 @@ class ShmLock(ShmModuleBaseLogger):
 
                     # check that this lock instance did not acquire the lock. this should
                     # not be possible with self._shm being None
-                    assert shm.buf[:LOCK_SHM_SIZE] != self._config.uuid.uuid_bytes, \
-                        "the buffer should not be equal to the uuid of the lock "\
-                        f"{str(self)} since self._shm is None and so the uid should "\
-                        "not have been set!"
+                    if shm.buf[:LOCK_SHM_SIZE] == self._config.uuid.uuid_bytes:
+                        raise exceptions.ShmLockRuntimeError("the buffer should not be equal "\
+                            f"to the uuid of the lock {str(self)} since self._shm is None and "\
+                            "so the uid should not have been set!")
 
                     # some other process has acquired the lock. this instance can die now.
                     break
