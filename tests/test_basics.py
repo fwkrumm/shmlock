@@ -4,6 +4,7 @@ tests of basics (lock/release) of shmlock package
 from multiprocessing import shared_memory
 import time
 import unittest
+import logging
 import shmlock
 import shmlock.shmlock_exceptions
 
@@ -115,6 +116,28 @@ class BasicsTest(unittest.TestCase):
 
         # check that the uuid of the locks is different
         self.assertNotEqual(lock.uuid, lock2.uuid)
+
+    def test_logger(self):
+        """
+        test the logger; logs will not be visible but for code coverage we add them
+        """
+        shm_name = str(time.time())
+        lock = shmlock.ShmLock(shm_name)
+
+        logger = logging.getLogger("test_logger")
+
+        for log in (logger, None,):
+            lock = shmlock.ShmLock(shm_name, logger=log)
+
+            # just check that they do not throw exceptions if no logger is set and with logger
+            lock.info("test info")
+            lock.debug("test debug")
+            lock.warning("test warning")
+            lock.warn("test warn")
+            lock.error("test error")
+            lock.exception("test exception")
+            lock.critical("test critical")
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
