@@ -46,7 +46,7 @@ So if you chose to use this module it is best to keep the number of synchronized
 
 This module itself has no additional dependencies. There are multiple ways to install this module:
 
-1. (Coming Soon) From Python Package Index:
+1. (WIP) From Python Package Index:
 `pip install shmlock`
 
 2. Install directly from the repository:
