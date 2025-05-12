@@ -195,7 +195,16 @@ class ShmLock(ShmModuleBaseLogger):
                 yield True
                 return
         finally:
-            self.release()
+            # decrement counter (default it to 1 in ase lock has never been acquired before so
+            # that counter never becomes negative); this would otherwise happen if one would
+            # (for whatever reason) call release() multiple times without acquiring the lock
+            self._shm.counter = max(getattr(self._shm, "counter", 1) - 1, 0)
+            self.debug("lock %s decremented counter to %d",
+                    self,
+                    self._shm.counter)
+            if self._shm.counter == 0:
+                # release the lock if counter is 0
+                self.release()
         if throw:
             raise exceptions.ShmLockTimeoutError(f"Could not acquire lock {self}")
         yield False
@@ -258,7 +267,12 @@ class ShmLock(ShmModuleBaseLogger):
         traceback : _type_
             ...
         """
-        self.release()
+        self._shm.counter = max(getattr(self._shm, "counter", 1) - 1, 0)
+        self.debug("lock %s decremented counter to %d",
+                self,
+                self._shm.counter)
+        if self._shm.counter == 0:
+            self.release()
 
     def acquire(self, timeout: float = None) -> bool:
         """
@@ -514,15 +528,7 @@ class ShmLock(ShmModuleBaseLogger):
         RuntimeError
             if the lock could not be released properly
         """
-        # decrement counter (default it to 1 in ase lock has never been acquired before so
-        # that counter never becomes negative); this would otherwise happen if one would
-        # (for whatever reason) call release() multiple times without acquiring the lock
-        self._shm.counter = max(getattr(self._shm, "counter", 1) - 1, 0)
-        self.debug("lock %s decremented counter to %d",
-                   self,
-                   self._shm.counter)
-
-        if getattr(self._shm, "shm", None) is not None and self._shm.counter == 0:
+        if getattr(self._shm, "shm", None) is not None:
             # only release if shared memory reference has been set and counter reached 0.
             # This prevents that release of nested with s: with s: with s: ... blocks.
             try:
