@@ -60,8 +60,7 @@ def remove_shm_from_resource_tracker(pattern: str, print_warning: bool = True):
         raise RuntimeError("In python 3.13 and above shared memory blocks contain the ''track'' "\
                            "parameter which can also be used in the ShmLock object. Use "\
                            "ShmLock(..., track=false) so that shared memory block will not "\
-                           "be tracked.", stacklevel=2)
-
+                           "be tracked.")
 
     if not isinstance(pattern, str):
         raise ValueError("pattern must be a string")
