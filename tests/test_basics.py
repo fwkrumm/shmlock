@@ -102,14 +102,18 @@ class BasicsTest(unittest.TestCase):
         lock = shmlock.ShmLock(shm_name)
         lock2 = shmlock.ShmLock(shm_name)
 
+        # check that the uuid of the first lock is returned
         self.assertTrue(lock.acquire())
         self.assertEqual(lock.get_uuid_of_locking_lock(), lock.uuid)
 
+        # switch acquiring locks
         lock.release()
         lock2.acquire()
 
+        # check that the uuid of lock2 is returned
         self.assertEqual(lock2.get_uuid_of_locking_lock(), lock2.uuid)
 
+        # check that the uuid of the locks is different
         self.assertNotEqual(lock.uuid, lock2.uuid)
 
 if __name__ == "__main__":
