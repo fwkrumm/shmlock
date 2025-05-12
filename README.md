@@ -292,7 +292,18 @@ lock.query_for_error_after_interrupt()
 
 If the shared memory is in an inconsistent state (such as being created but lock does not hold reference) the function raises an exception. Otherwise, if everything is functioning correctly, it simply returns `None`. For further details, see to the function's doc-string.
 
-However best practice is to manually handle KeyboardInterrupt
+
+In case you expect the process being terminated abruptly, you should define the release via signal:
+
+```python
+s = shmlock.ShmLock("lock_name")
+
+def cleanup(signum, frame):
+    s.release()
+    os._exit(0)
+
+signal.signal(signal.SIGTERM, cleanup)
+```
 
 ---
 <a name="version-history"></a>
