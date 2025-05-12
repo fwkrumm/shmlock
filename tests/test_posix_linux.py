@@ -65,6 +65,9 @@ class LinuxPosixTests(unittest.TestCase):
 
     @unittest.skipUnless(sys.platform.startswith("linux"), "test only for linux")
     def test_empty_uuid_in_created_file(self):
+        """
+        test empty uuid in created file
+        """
         l = shmlock.ShmLock(self._shm_name)
 
         # fake creation of block but lock did not write its uuid to the file. this happens
@@ -85,9 +88,10 @@ class LinuxPosixTests(unittest.TestCase):
                 shm.close()
                 shm.unlink()
 
-
-    @unittest.skipUnless(sys.platform.startswith("linux"), "test only for linux")
     def test_error_function_if_lock_acquired(self):
+        """
+        test that query for error raises an exception if lock is acquired
+        """
         l = shmlock.ShmLock(self._shm_name)
 
         with l:
@@ -118,8 +122,8 @@ class LinuxPosixTests(unittest.TestCase):
 
         if sys.version_info >= (3, 13):
             with self.assertRaises(RuntimeError):
-                # in python 3.13 and above shared memory blocks contain the ''track'' parameter
-                # which can also be used in the ShmLock object. Use ShmLock(..., track=false) so
+                # in python 3.13 and above shared memory blocks contain the track parameter
+                # which can also be used in the ShmLock object. Use ShmLock(..., track=False) so
                 # that shared memory block will not be tracked by the resource tracker
                 remove_shm_from_resource_tracker(l.name)
         else:

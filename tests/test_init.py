@@ -96,7 +96,8 @@ class InitTest(unittest.TestCase):
                 shmlock.ShmLock(shm_name, track=False)
         else:
             # should work fine
-            _ = shmlock.ShmLock(shm_name, track=False)
+            l = shmlock.ShmLock(shm_name, track=False)
+            self.assertTrue(l.acquire())
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
