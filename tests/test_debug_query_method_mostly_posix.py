@@ -9,6 +9,8 @@ from multiprocessing import shared_memory
 import shmlock
 import shmlock.shmlock_exceptions
 import shmlock.shmlock_main
+from shmlock.shmlock_main import remove_shm_from_resource_tracker
+from shmlock.shmlock_monkey_patch import _PATTERN_LIST
 
 class LinuxPosixTests(unittest.TestCase):
     """
@@ -63,6 +65,9 @@ class LinuxPosixTests(unittest.TestCase):
 
     @unittest.skipUnless(sys.platform.startswith("linux"), "test only for linux")
     def test_empty_uuid_in_created_file(self):
+        """
+        test empty uuid in created file
+        """
         l = shmlock.ShmLock(self._shm_name)
 
         # fake creation of block but lock did not write its uuid to the file. this happens
@@ -83,9 +88,10 @@ class LinuxPosixTests(unittest.TestCase):
                 shm.close()
                 shm.unlink()
 
-
-    @unittest.skipUnless(sys.platform.startswith("linux"), "test only for linux")
     def test_error_function_if_lock_acquired(self):
+        """
+        test that query for error raises an exception if lock is acquired
+        """
         l = shmlock.ShmLock(self._shm_name)
 
         with l:
@@ -94,9 +100,56 @@ class LinuxPosixTests(unittest.TestCase):
                 # acquired locks are seemingly working fine
                 l.query_for_error_after_interrupt()
 
+    def test_query_function(self):
+        """
+        test that query for error raises an exception if lock is acquired
+        """
+        l1 = shmlock.ShmLock(self._shm_name)
+        l2 = shmlock.ShmLock(self._shm_name)
+
+        # acquire lock
+        l1.acquire()
+
+        # l2 should now cleanly proceed and not throw anything
+        l2.query_for_error_after_interrupt()
+
+
     def test_error_function_if_all_is_fine(self):
+        """
+        test that query for error does not raise an exception if all is fine and returns None
+        """
         l = shmlock.ShmLock(self._shm_name)
         self.assertIsNone(l.query_for_error_after_interrupt())
+
+    def test_monkey_patch(self):
+        """
+        test monkey patching of the lock
+
+        NOTE that this is rather for code coverage. To test if the monkey patching
+        works, we need to test the lock in a separate process. This is not done here but in the
+        examples.
+
+        NOTE that the patch makes only sense on posix systems. But we execute it on all systems
+        """
+
+        l = shmlock.ShmLock(self._shm_name)
+
+        if sys.version_info >= (3, 13):
+            with self.assertRaises(RuntimeError):
+                # in python 3.13 and above shared memory blocks contain the track parameter
+                # which can also be used in the ShmLock object. Use ShmLock(..., track=False) so
+                # that shared memory block will not be tracked by the resource tracker
+                remove_shm_from_resource_tracker(l.name)
+        else:
+
+            remove_shm_from_resource_tracker(l.name)
+
+            self.assertTrue(len(_PATTERN_LIST) > 0, "monkey patching did not work")
+            self.assertTrue(l.name in _PATTERN_LIST)
+
+            with self.assertRaises(ValueError):
+                # pattern must be a string
+                remove_shm_from_resource_tracker(1)
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

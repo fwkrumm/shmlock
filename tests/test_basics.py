@@ -4,8 +4,10 @@ tests of basics (lock/release) of shmlock package
 from multiprocessing import shared_memory
 import time
 import unittest
+import logging
 import shmlock
 import shmlock.shmlock_exceptions
+from shmlock.shmlock_uuid import ShmUuid
 
 class BasicsTest(unittest.TestCase):
     """
@@ -43,8 +45,23 @@ class BasicsTest(unittest.TestCase):
         finally:
             lock2.release()
 
+    def test_properties(self):
+        """
+        test some properties
+        """
+        shm_name = str(time.time())
+        lock = shmlock.ShmLock(shm_name)
+
+        self.assertTrue(lock.acquire())
+        self.assertTrue(lock.acquired)
+
+        lock.description = "test description"
+        self.assertEqual(lock.description, "test description")
 
     def test_lock_with_exception(self):
+        """
+        test that lock is released even if an exception is raised
+        """
         shm_name = str(time.time())
         lock = shmlock.ShmLock(shm_name)
 
@@ -86,10 +103,27 @@ class BasicsTest(unittest.TestCase):
         self.assertTrue(lock.acquire())
 
         lock2 = shmlock.ShmLock(shm_name)
-        self.assertFalse(lock2.acquire(timeout=1)) # acquired by other lock
+
+        # check expected behavior if lock already acquired
+        self.assertFalse(lock2.acquire(timeout=1)) # positive timeout
+        self.assertFalse(lock2.acquire(timeout=False)) # timeout False
+
+        with self.assertRaises(shmlock.shmlock_exceptions.ShmLockTimeoutError):
+            # test forced timeout throw
+            with lock2.lock(timeout=0.1, throw=True):
+                pass
+
+        with self.assertRaises(shmlock.shmlock_exceptions.ShmLockTimeoutError):
+            # test forced timeout throw
+            with lock2(timeout=0.1, throw=True):
+                pass
+
+        with lock2(timeout=0.1) as res:
+            self.assertFalse(res)
+
 
         self.assertTrue(lock.release()) # release should be successful
-        self.assertTrue(lock2.acquire()) # lock should not be acquirable
+        self.assertTrue(lock2.acquire()) # not should be acquirable
 
         self.assertTrue(lock2.release()) # check successful release
 
@@ -110,7 +144,73 @@ class BasicsTest(unittest.TestCase):
             shm.close()
             shm.unlink()
 
+    def test_get_uuid_of_locking_lock(self):
+        """
+        test the get_uuid_of_locking_lock method
+        """
+        shm_name = str(time.time())
+        lock = shmlock.ShmLock(shm_name)
+        lock2 = shmlock.ShmLock(shm_name)
 
+        # no shm acquired yet
+        self.assertIsNone(lock.get_uuid_of_locking_lock())
+
+        # check that the uuid of the first lock is returned
+        self.assertTrue(lock.acquire())
+        self.assertEqual(lock.get_uuid_of_locking_lock(), lock.uuid)
+
+        # switch acquiring locks
+        lock.release()
+        lock2.acquire()
+
+        # check that the uuid of lock2 is returned
+        self.assertEqual(lock2.get_uuid_of_locking_lock(), lock2.uuid)
+
+        # check that the uuid of the locks is different
+        self.assertNotEqual(lock.uuid, lock2.uuid)
+
+    def test_logger(self):
+        """
+        test the logger; logs will not be visible but for code coverage we add them
+        """
+        shm_name = str(time.time())
+        lock = shmlock.ShmLock(shm_name)
+
+        logger = logging.getLogger("test_logger")
+        logger.setLevel(logging.NOTSET)
+
+        for log in (logger, None,):
+            lock = shmlock.ShmLock(shm_name, logger=log)
+
+            # just check that they do not throw exceptions if no logger is set and with logger
+            lock.info("test info")
+            lock.debug("test debug")
+            lock.warning("test warning")
+            lock.warn("test warn")
+            lock.error("test error")
+            lock.exception("test exception")
+            lock.critical("test critical")
+
+    def test_repr(self):
+        """
+        test the repr method
+        """
+        shm_name = str(time.time())
+        lock = shmlock.ShmLock(shm_name)
+
+        # check that the repr method does not throw an exception
+        self.assertIsNotNone(repr(lock))
+
+    def test_uuid_methods(self):
+        """
+        test uuid conversion methods and representation method existence
+        """
+        uuid = ShmUuid()
+        uuid_bytes = uuid.uuid_bytes
+        uuid_str = uuid.uuid_str
+        self.assertEqual(uuid_bytes, ShmUuid.string_to_bytes(uuid_str))
+        self.assertEqual(uuid_str, ShmUuid.byte_to_string(uuid_bytes))
+        self.assertIsNotNone(repr(uuid))
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

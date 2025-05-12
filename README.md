@@ -300,7 +300,7 @@ If the shared memory is in an inconsistent state�such as being created but unu
 |----------------------------|-------------|
 | 1.0.0                      | First release version providing basic functionality |
 | 1.1.0                      | Add pypi workflow; minor corrections |
-| 2.0.0                      | Added `query_for_error_after_interrupt(...)` function and removed custom (experimental) resource tracker |
+| 2.0.0                      | Added `query_for_error_after_interrupt(...)` function, removed custom (experimental) resource tracker, added many tests for code coverage |
 
 
 ---
@@ -308,7 +308,5 @@ If the shared memory is in an inconsistent state�such as being created but unu
 <a id="todos"></a>
 ## ToDos
 
-- achieve 100% code coverage
-- add reentrancy
-- upload to PyPI
-
+- add reentrancy (WIP)
+- upload to PyPI (WIP)
