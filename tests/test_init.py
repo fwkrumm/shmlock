@@ -1,12 +1,13 @@
 """
 init tests of shmlock package
 """
+import multiprocessing
 import multiprocessing.synchronize
+
+from multiprocessing import shared_memory
 import sys
 import time
 import unittest
-import multiprocessing
-from multiprocessing import shared_memory
 import shmlock
 import shmlock.shmlock_exceptions
 
