@@ -94,7 +94,23 @@ class BasicsTest(unittest.TestCase):
             shm.close()
             shm.unlink()
 
+    def test_get_uuid_of_locking_lock(self):
+        """
+        test the get_uuid_of_locking_lock method
+        """
+        shm_name = str(time.time())
+        lock = shmlock.ShmLock(shm_name)
+        lock2 = shmlock.ShmLock(shm_name)
 
+        self.assertTrue(lock.acquire())
+        self.assertEqual(lock.get_uuid_of_locking_lock(), lock.uuid)
+
+        lock.release()
+        lock2.acquire()
+
+        self.assertEqual(lock2.get_uuid_of_locking_lock(), lock2.uuid)
+
+        self.assertNotEqual(lock.uuid, lock2.uuid)
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
