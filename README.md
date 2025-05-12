@@ -278,7 +278,7 @@ Please note that with Python version 3.13, there will be a "track" parameter for
 
 ### Process Interrupt (SIGINT/SIGTERM)
 
-One potential issue arises if a process is terminated�such as through a `KeyboardInterrupt`�during the creation of shared memory (i.e., inside `shared_memory.SharedMemory(...)`). On Linux, this can lead to unintended outcomes, such as the shared memory mmap file being created with a size of zero or a shared memory block being allocated without an object reference being returned. In such cases, neither `close()` nor `unlink()` can be properly called.
+One potential issue arises if a process is terminated (such as through a `KeyboardInterrupt`) during the creation of shared memory (i.e., inside `shared_memory.SharedMemory(...)`). On Linux, this can lead to unintended outcomes, such as the shared memory mmap file being created with a size of zero or a shared memory block being allocated without an object reference being returned. In such cases, neither `close()` nor `unlink()` can be properly called.
 
 Since detecting this scenario is not trivial, the function `query_for_error_after_interrupt(...)` helps to handle such cases:
 
@@ -290,7 +290,9 @@ lock.query_for_error_after_interrupt()
 
 ```
 
-If the shared memory is in an inconsistent state�such as being created but unused�the function raises an exception. Otherwise, if everything is functioning correctly, it simply returns `None`. For further details, refer to the function's doc-string.
+If the shared memory is in an inconsistent state (such as being created but lock does not hold reference) the function raises an exception. Otherwise, if everything is functioning correctly, it simply returns `None`. For further details, see to the function's doc-string.
+
+However best practice is to manually handle KeyboardInterrupt
 
 ---
 <a name="version-history"></a>
