@@ -143,6 +143,13 @@ print(lock.uuid)
 
 # check if lock is currently acquired
 print(lock.acquired)
+
+# the lock is reentrant:
+with lock:
+    with lock:
+        pass
+    # still locked, lock.release() would raise Exception instead force parameter is used
+
 ```
 
 ---
@@ -333,12 +340,11 @@ signal.signal(signal.SIGTERM, cleanup)
 | 1.0.0                      | First release version providing basic functionality |
 | 1.1.0                      | Add pypi workflow; minor corrections |
 | 2.0.0                      | Added `query_for_error_after_interrupt(...)` function, removed custom (experimental) resource tracker, added many tests for code coverage |
-
+| 2.1.0                      | Add reentrancy support |
 
 ---
 <a name="todos"></a>
 <a id="todos"></a>
 ## ToDos
 
-- add reentrancy (WIP)
 - upload to PyPI (WIP)
