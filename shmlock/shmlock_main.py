@@ -377,7 +377,8 @@ class ShmLock(ShmModuleBaseLogger):
 
         NOTE that this might affect the acquirement of other locks. Since e.g. on Windows
         as long as the handle is open the shared memory block is not released.
-        So this version is used best at the beginning of the main process or at the end.
+        So this version is used best at the beginning of the main process or in case any
+        processes have been interrupted.
 
         NOTE that if lock has been acquired (shm block created) but lock did not yet wrote
         its uuid to the block, this function will return (b"\x00" * LOCK_SHM_SIZE)
