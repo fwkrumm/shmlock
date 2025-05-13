@@ -668,7 +668,7 @@ class ShmLock(ShmModuleBaseLogger):
                 shm.close()
 
     @classmethod
-    def list_instances(cls):
+    def get_instances_list(cls):
         """
         get list of all class instances (per process)
         """

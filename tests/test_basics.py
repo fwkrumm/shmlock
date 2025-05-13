@@ -144,9 +144,9 @@ class BasicsTest(unittest.TestCase):
             shm.close()
             shm.unlink()
 
-    def test_get_uuid_of_locking_lock(self):
+    def test_debug_get_uuid_of_locking_lock(self):
         """
-        test the get_uuid_of_locking_lock method
+        test the debug_get_uuid_of_locking_lock method
         """
         shm_name = str(time.time())
         lock = shmlock.ShmLock(shm_name)

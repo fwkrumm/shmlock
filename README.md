@@ -124,6 +124,25 @@ with lock(timeout=1, throw=True):
     # your code here; if acquirement fails, TimeoutError is raised
     pass
 
+# add description for debug purposes
+lock.description = "main process lock"
+
+# list all created lock instances
+print(shmlock.ShmLock.get_instances_list())
+
+# get exit event and set it in the main process to stop all locks from acquiring
+lock.get_exit_event()
+
+# get uuid of lock which has currently acquired shared memory
+lock.acquire()
+print(lock.debug_get_uuid_of_locking_lock())
+lock.release()
+
+# get uuid of this lock
+print(lock.uuid)
+
+# check if lock is currently acquired
+print(lock.acquired)
 ```
 
 ---
@@ -163,7 +182,7 @@ This happens if a race condition occurs, i.e., one instance overwrote the value 
 
 ### ./examples/performance_analysis/run_perf.py
 
-This file can be used to test the performance of different locking mechanisms. Currently, this includes "no lock", zmq, shmlock, shmlock (with resource tracking), and filelock.
+This file can be used to test the performance of different locking mechanisms. Currently, this includes "no lock", zmq, shmlock, and filelock.
 
 After executing `python run_perf.py`, you should get an output that looks approximately like this:
 
@@ -216,7 +235,7 @@ INFO:PerformanceLogger:Result buffer: 15000 (should be 15000)
 
 The first test does not synchronize anything. This is, of course, the fastest; however, the counter is often not incremented properly.
 
-The second test uses pyzmq (https://pypi.org/project/pyzmq/), the third test uses the shared memory lock implemented in this project, the fourth test uses the shared memory lock with experimental custom resource tracking (to check for performance issues), and the fifth test uses filelock (https://pypi.org/project/filelock/).
+The second test uses pyzmq (https://pypi.org/project/pyzmq/), the third test uses the shared memory lock implemented in this project, and the fourth test uses filelock (https://pypi.org/project/filelock/).
 
 Note that the results depend on the OS and hardware. The "average time" refers to the time required for a single lock acquisition, result value increment, and lock release:
 
@@ -278,7 +297,7 @@ Please note that with Python version 3.13, there will be a "track" parameter for
 
 ### Process Interrupt (SIGINT/SIGTERM)
 
-One potential issue arises if a process is terminated�such as through a `KeyboardInterrupt`�during the creation of shared memory (i.e., inside `shared_memory.SharedMemory(...)`). On Linux, this can lead to unintended outcomes, such as the shared memory mmap file being created with a size of zero or a shared memory block being allocated without an object reference being returned. In such cases, neither `close()` nor `unlink()` can be properly called.
+One potential issue arises if a process is terminated (such as through a `KeyboardInterrupt`) during the creation of shared memory (i.e., inside `shared_memory.SharedMemory(...)`). On Linux, this can lead to unintended outcomes, such as the shared memory mmap file being created with a size of zero or a shared memory block being allocated without an object reference being returned. In such cases, neither `close()` nor `unlink()` can be properly called.
 
 Since detecting this scenario is not trivial, the function `query_for_error_after_interrupt(...)` helps to handle such cases:
 
@@ -290,7 +309,20 @@ lock.query_for_error_after_interrupt()
 
 ```
 
-If the shared memory is in an inconsistent state�such as being created but unused�the function raises an exception. Otherwise, if everything is functioning correctly, it simply returns `None`. For further details, refer to the function's doc-string.
+If the shared memory is in an inconsistent state (such as being created but lock does not hold reference) the function raises an exception. Otherwise, if everything is functioning correctly, it simply returns `None`. For further details, see to the function's doc-string.
+
+
+In case you expect the process being terminated abruptly, you should assure the release via signal module:
+
+```python
+s = shmlock.ShmLock("lock_name")
+
+def cleanup(signum, frame):
+    s.release()
+    os._exit(0)
+
+signal.signal(signal.SIGTERM, cleanup)
+```
 
 ---
 <a name="version-history"></a>

@@ -107,8 +107,8 @@ class InitTest(unittest.TestCase):
         l2 = shmlock.ShmLock(shm_name_2)
         l3 = shmlock.ShmLock(shm_name_3)
 
-        list_instances = shmlock.ShmLock.list_instances()
-        self.assertEqual(len(list_instances), 3)
+        get_instances_list = shmlock.ShmLock.get_instances_list()
+        self.assertEqual(len(get_instances_list), 3)
 
         del l1
         del l2
