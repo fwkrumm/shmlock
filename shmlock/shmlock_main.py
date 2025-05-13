@@ -156,7 +156,6 @@ class ShmLock(ShmModuleBaseLogger):
         """
         return f"ShmLock(name={self._config.name}, "\
                f"uuid={self._config.uuid}, "\
-               f"poll_interval={self._config.poll_interval}, "\
                f"description={self._config.description})"
 
     @contextmanager
