@@ -602,7 +602,7 @@ class ShmLock(ShmModuleBaseLogger):
         """
         return self._config.exit_event
 
-    def get_uuid_of_locking_lock(self) -> str | None:
+    def debug_get_uuid_of_locking_lock(self) -> str | None:
         """
         get uuid of the locking lock
 
@@ -633,7 +633,7 @@ class ShmLock(ShmModuleBaseLogger):
                 shm.close()
 
     @classmethod
-    def list_instances(cls):
+    def get_instances_list(cls):
         """
         get list of all class instances (per process)
         """

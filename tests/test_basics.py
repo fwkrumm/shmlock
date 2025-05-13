@@ -128,27 +128,27 @@ class BasicsTest(unittest.TestCase):
             shm.close()
             shm.unlink()
 
-    def test_get_uuid_of_locking_lock(self):
+    def test_debug_get_uuid_of_locking_lock(self):
         """
-        test the get_uuid_of_locking_lock method
+        test the debug_get_uuid_of_locking_lock method
         """
         shm_name = str(time.time())
         lock = shmlock.ShmLock(shm_name)
         lock2 = shmlock.ShmLock(shm_name)
 
         # no shm acquired yet
-        self.assertIsNone(lock.get_uuid_of_locking_lock())
+        self.assertIsNone(lock.debug_get_uuid_of_locking_lock())
 
         # check that the uuid of the first lock is returned
         self.assertTrue(lock.acquire())
-        self.assertEqual(lock.get_uuid_of_locking_lock(), lock.uuid)
+        self.assertEqual(lock.debug_get_uuid_of_locking_lock(), lock.uuid)
 
         # switch acquiring locks
         lock.release()
         lock2.acquire()
 
         # check that the uuid of lock2 is returned
-        self.assertEqual(lock2.get_uuid_of_locking_lock(), lock2.uuid)
+        self.assertEqual(lock2.debug_get_uuid_of_locking_lock(), lock2.uuid)
 
         # check that the uuid of the locks is different
         self.assertNotEqual(lock.uuid, lock2.uuid)
