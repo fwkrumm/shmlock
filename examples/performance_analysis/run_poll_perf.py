@@ -26,8 +26,6 @@ except ImportError:
 NUM_RUNS = 1000
 NUM_PROCESSES = 15
 
-shmlock.enable_disable_warnings(False)
-
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("LoggerExamplePollIntervalComparison")
 
@@ -74,7 +72,6 @@ def worker_interval(poll_interval: float,
     try:
         result = shared_memory.SharedMemory(name=RESULT_SHM_NAME)
 
-        shmlock.init_custom_resource_tracking()
         shm_lock = shmlock.ShmLock(lock_name,
                                    poll_interval=poll_interval,
                                    track=False if sys.version_info >= (3, 13) else None)

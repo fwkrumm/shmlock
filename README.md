@@ -8,6 +8,7 @@
 - [Quick Dive](#quick-dive)
 - [Examples](#examples)
 - [Troubleshooting and Known Issues](#troubleshooting-and-known-issues)
+- [Version History](#version-history)
 - [ToDos](#todos)
 
 
@@ -45,14 +46,16 @@ So if you chose to use this module it is best to keep the number of synchronized
 
 This module itself has no additional dependencies. There are multiple ways to install this module:
 
-1. From Python Package Index:
+1. (WIP) From Python Package Index:
 `pip install shmlock`
 
 2. Install directly from the repository:
 `pip install git+https://github.com/fwkrumm/shmlock@master`
 for latest version or
-`pip install git+https://github.com/fwkrumm/shmlock@1.0.0`
-for a specific version.
+```
+pip install git+https://github.com/fwkrumm/shmlock@X.Y.Z
+```
+for a specific version; cf. Section [Version History](#version-history).
 
 3. Clone this repository and install it from the local files via pip:
     ```
@@ -121,6 +124,25 @@ with lock(timeout=1, throw=True):
     # your code here; if acquirement fails, TimeoutError is raised
     pass
 
+# add description for debug purposes
+lock.description = "main process lock"
+
+# list all created lock instances
+print(shmlock.ShmLock.get_instances_list())
+
+# get exit event and set it in the main process to stop all locks from acquiring
+lock.get_exit_event()
+
+# get uuid of lock which has currently acquired shared memory
+lock.acquire()
+print(lock.debug_get_uuid_of_locking_lock())
+lock.release()
+
+# get uuid of this lock
+print(lock.uuid)
+
+# check if lock is currently acquired
+print(lock.acquired)
 ```
 
 ---
@@ -160,7 +182,7 @@ This happens if a race condition occurs, i.e., one instance overwrote the value 
 
 ### ./examples/performance_analysis/run_perf.py
 
-This file can be used to test the performance of different locking mechanisms. Currently, this includes "no lock", zmq, shmlock, shmlock (with resource tracking), and filelock.
+This file can be used to test the performance of different locking mechanisms. Currently, this includes "no lock", zmq, shmlock, and filelock.
 
 After executing `python run_perf.py`, you should get an output that looks approximately like this:
 
@@ -213,7 +235,7 @@ INFO:PerformanceLogger:Result buffer: 15000 (should be 15000)
 
 The first test does not synchronize anything. This is, of course, the fastest; however, the counter is often not incremented properly.
 
-The second test uses pyzmq (https://pypi.org/project/pyzmq/), the third test uses the shared memory lock implemented in this project, the fourth test uses the shared memory lock with experimental custom resource tracking (to check for performance issues), and the fifth test uses filelock (https://pypi.org/project/filelock/).
+The second test uses pyzmq (https://pypi.org/project/pyzmq/), the third test uses the shared memory lock implemented in this project, and the fourth test uses filelock (https://pypi.org/project/filelock/).
 
 Note that the results depend on the OS and hardware. The "average time" refers to the time required for a single lock acquisition, result value increment, and lock release:
 
@@ -244,7 +266,7 @@ This file is very similar to `run_perf.py`; however, it focuses solely on `shmlo
 
 ### Resource Tracking
 
-For Python 3.13 and later versions, there is an additional parameter for `SharedMemory(..., track: bool = True)` which disables the shared memory tracking that causes the following tracking issues. Adding this parameter to the lock is still a pending task.
+For Python 3.13 and later versions, there is an additional parameter for `SharedMemory(..., track: bool = True)` which disables the shared memory tracking that causes the following tracking issues.
 
 On POSIX systems, the `resource_tracker` will likely complain that either `shared_memory` instances were not found or spam `KeyErrors`. This issue is known:
 
@@ -268,44 +290,52 @@ lock2 = shmlock.ShmLock("whatsoever" + lock_pattern)
 
 This also seems to slightly increase the performance on POSIX systems.
 
-Usually, each lock should be released properly.
-Additionally, there is an experimental custom resource tracker; see the following section.
-
+Usually, each lock should be released properly. One problem however is if the process is
+interrupted abruptly (SIGINT/SIGTERM) which might cause issues. For details see the following Subsection.
 
 Please note that with Python version 3.13, there will be a "track" parameter for shared memory block creation, which can be used to disable tracking. I am aware of this and will use it at some point in the future.
 
-### Custom Resource Tracker (experimental)
+### Process Interrupt (SIGINT/SIGTERM)
 
-Since it is crucial that all shared memory blocks are released and the resource tracker on posix systems might cause issues, a custom resource tracker is implemented. Usually however each lock object should release its memory at destruction. To use the (custom) shared memory tracker please follow the following code snippet
+One potential issue arises if a process is terminated (such as through a `KeyboardInterrupt`) during the creation of shared memory (i.e., inside `shared_memory.SharedMemory(...)`). On Linux, this can lead to unintended outcomes, such as the shared memory mmap file being created with a size of zero or a shared memory block being allocated without an object reference being returned. In such cases, neither `close()` nor `unlink()` can be properly called.
 
-Note that this is still experimental.
+Since detecting this scenario is not trivial, the function `query_for_error_after_interrupt(...)` helps to handle such cases:
+
 
 ```python
 
-import logging
-import shmlock
-
-# disable warnings if desired
-shmlock.enable_disable_warnings(False)
-
-# optional logger; if a history of the tracking is required, it is currently suggested to use a file logger
-logging.basicConfig(level="DEBUG")
-log = logging.getLogger(__name__)
-
-# init resource tracking (once per process)
-shmlock.init_custom_resource_tracking(logger=log)
-
-# now use the ShmLock. Each requirement/release is logged via the specified logger (debug level)
-...
-
-
-# to uninitialize tracking use
-shmlock.de_init_custom_resource_tracking()
-# OR
-shmlock.de_init_custom_resource_tracking_without_clean_up()
-# the latter does only report and not free anything
+lock = shmlock.ShmLock("lock_name")
+lock.query_for_error_after_interrupt()
 
 ```
+
+If the shared memory is in an inconsistent state (such as being created but lock does not hold reference) the function raises an exception. Otherwise, if everything is functioning correctly, it simply returns `None`. For further details, see to the function's doc-string.
+
+
+In case you expect the process being terminated abruptly, you should assure the release via signal module:
+
+```python
+s = shmlock.ShmLock("lock_name")
+
+def cleanup(signum, frame):
+    s.release()
+    os._exit(0)
+
+signal.signal(signal.SIGTERM, cleanup)
+```
+
+However, please note that in some situations, you might not be able to recover from an interruption. One example on POSIX is when the shared memory mmap has been created at `/dev/shm/` but has not yet been filled—i.e., it has a size of zero—and the process is interrupted. In this case, you can neither create shared memory with that name (`FileExistsError`) nor attach to it (`ValueError`). The previously mentioned `query_for_error_after_interrupt(...)` will report this error; however, you will have to manually delete the mmap file at `/dev/shm/{lock_name}`.
+
+
+---
+<a name="version-history"></a>
+## Version History
+
+| Version / Git Tag on Master | Description |
+|----------------------------|-------------|
+| 1.0.0                      | First release version providing basic functionality |
+| 1.1.0                      | Add pypi workflow; minor corrections |
+| 2.0.0                      | Added `query_for_error_after_interrupt(...)` function, removed custom (experimental) resource tracker, added many tests for code coverage |
 
 
 ---
@@ -313,5 +343,5 @@ shmlock.de_init_custom_resource_tracking_without_clean_up()
 <a id="todos"></a>
 ## ToDos
 
-- achieve 100% code coverage
-- add reentrancy
+- add reentrancy (WIP)
+- upload to PyPI (WIP)

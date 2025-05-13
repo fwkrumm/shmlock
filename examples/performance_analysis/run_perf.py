@@ -29,9 +29,6 @@ except ImportError:
 NUM_RUNS = 1000
 NUM_PROCESSES = 15
 
-
-shmlock.enable_disable_warnings(False)
-
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("LoggerExampleLockComparison")
 
@@ -205,11 +202,6 @@ def worker_different_locks(test_type: str,
                                    poll_interval=SHM_LOCK_POLL_INTERVAL,
                                    logger=log,
                                    track=False if sys.version_info >= (3, 13) else None)
-        elif test_type  == "shmlock_with_resource_tracking":
-            shmlock.init_custom_resource_tracking()
-            lock = shmlock.ShmLock(lock_name,
-                                   poll_interval=SHM_LOCK_POLL_INTERVAL,
-                                   track=False if sys.version_info >= (3, 13) else None)
         elif test_type == "filelock":
             lock = filelock.FileLock(lock_name)
         elif test_type == "zmq":
@@ -268,7 +260,6 @@ if __name__ == "__main__":
         for TEST_TYPE in ("no_lock",
                           "zmq",
                           "shmlock",
-                          "shmlock_with_resource_tracking",
                           "filelock"):
 
             log.info("Running test type %s", TEST_TYPE)
@@ -335,6 +326,10 @@ if __name__ == "__main__":
                 log.info("Result buffer: %d (should be %d)\n\n",
                          final_res,
                          NUM_PROCESSES*NUM_RUNS)
+                # actually if this happens the lock does not work
+                assert final_res == NUM_PROCESSES*NUM_RUNS,\
+                    "lock failed! this should never happen. expected result "\
+                    f"{NUM_PROCESSES*NUM_RUNS} != actual result {final_res}"
     finally:
         if RESULT is not None:
             RESULT.close()

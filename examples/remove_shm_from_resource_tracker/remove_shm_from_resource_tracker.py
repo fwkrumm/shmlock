@@ -112,16 +112,16 @@ if __name__ == "__main__":
                                                     name=NAME_OF_TEST_SHM_3,
                                                     size=1))
             else:
-                # python 3.13 and above
-                shms.append(shared_memory.SharedMemory(create=True,
+                # python 3.13 and above (disable pylint warnings for backwards compatibility)
+                shms.append(shared_memory.SharedMemory(create=True, # pylint:disable=(unexpected-keyword-arg)
                                                     name=NAME_OF_TEST_SHM_1,
                                                     size=1,
                                                     track=False))
-                shms.append(shared_memory.SharedMemory(create=True,
+                shms.append(shared_memory.SharedMemory(create=True, # pylint:disable=(unexpected-keyword-arg)
                                                     name=NAME_OF_TEST_SHM_2,
                                                     size=1,
                                                     track=False))
-                shms.append(shared_memory.SharedMemory(create=True,
+                shms.append(shared_memory.SharedMemory(create=True, # pylint:disable=(unexpected-keyword-arg)
                                                     name=NAME_OF_TEST_SHM_3,
                                                     size=1,
                                                     track=False))
