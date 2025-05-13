@@ -482,7 +482,9 @@ class ShmLock(ShmModuleBaseLogger):
                 "blocks and on Linux clean them up manually at path /dev/shm.",
                 err,
                 self)
-            raise exceptions.ShmLockValueError(f"Shared memory {self}") from err
+            raise exceptions.ShmLockValueError(f"Valueerror for {self}. On POSIX there is "\
+                                               "probably a zero-sized mmap file at /dev/shm "\
+                                               "which has to be removed manually") from err
         except FileNotFoundError:
             # shared memory does not exist, so keyboard interrupt did not yield to
             # any undesired behavior. this is "all good"
