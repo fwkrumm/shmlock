@@ -8,7 +8,6 @@ import os
 import time
 import sys
 import threading
-import weakref
 import multiprocessing
 import multiprocessing.synchronize
 from multiprocessing import shared_memory
@@ -75,15 +74,11 @@ class ShmLock(ShmModuleBaseLogger):
     lock class using shared memory to synchronize shared resources access
     """
 
-    # for resource tracking
-    instances = weakref.WeakSet()  # for reference tracking of all instances
-    instances_lock = threading.Lock()  # lock for thread safety
-
     def __init__(self,
                  lock_name: str,
                  poll_interval: float|int = 0.05,
                  logger: logging.Logger = None,
-                 exit_event: multiprocessing.synchronize.Event = None,
+                 exit_event: multiprocessing.synchronize.Event | threading.Event = None,
                  track: bool = None):
         """
         default init. set shared memory name (for lock) and poll_interval.
@@ -138,10 +133,6 @@ class ShmLock(ShmModuleBaseLogger):
                 raise ValueError("track parameter has been set but it is only supported for "\
                                  "python >= 3.13")
             self._config.track = bool(track)
-
-        # add lock instance to reference list
-        with self.__class__.instances_lock:
-            self.__class__.instances.add(self)
 
         self.debug("lock %s initialized.", self)
 
@@ -552,10 +543,6 @@ class ShmLock(ShmModuleBaseLogger):
         destructor
         """
         self.release(force=True)
-        with self.__class__.instances_lock:
-            if self in self.__class__.instances:
-                self.__class__.instances.remove(self)
-                self.debug("instance %s removed from reference list.", self)
 
     @property
     def locked(self) -> bool:
@@ -655,11 +642,3 @@ class ShmLock(ShmModuleBaseLogger):
         finally:
             if shm is not None:
                 shm.close()
-
-    @classmethod
-    def get_instances_list(cls):
-        """
-        get list of all class instances (per process)
-        """
-        with cls.instances_lock:
-            return list(cls.instances)

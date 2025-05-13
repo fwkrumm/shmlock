@@ -93,28 +93,6 @@ class InitTest(unittest.TestCase):
         with self.assertRaises(shmlock.shmlock_exceptions.ShmLockValueError):
             shmlock.ShmLock("")
 
-    def test_instance_list(self):
-        """
-        test if instance list is correct
-        """
-
-        # create 3 instances of ShmLock. NOTE that the instances are added thread-wide
-        # independent of uuid
-        shm_name_1 = str(time.time_ns())
-        shm_name_2 = str(time.time_ns())
-        shm_name_3 = str(time.time_ns())
-        l1 = shmlock.ShmLock(shm_name_1)
-        l2 = shmlock.ShmLock(shm_name_2)
-        l3 = shmlock.ShmLock(shm_name_3)
-
-        get_instances_list = shmlock.ShmLock.get_instances_list()
-        self.assertEqual(len(get_instances_list), 3)
-
-        del l1
-        del l2
-        del l3
-
-
     @unittest.skipUnless(sys.version_info < (3, 13), "test only for lower python versions")
     def test_track_for_too_low_version(self):
         shm_name = str(time.time())
