@@ -327,6 +327,9 @@ def cleanup(signum, frame):
 signal.signal(signal.SIGTERM, cleanup)
 ```
 
+However, please note that in some situations, you might not be able to recover from an interruption. One example on POSIX is when the shared memory mmap has been created at `/dev/shm/` but has not yet been filled—i.e., it has a size of zero—and the process is interrupted. In this case, you can neither create shared memory with that name (`FileExistsError`) nor attach to it (`ValueError`). The previously mentioned `query_for_error_after_interrupt(...)` will report this error; however, you will have to manually delete the mmap file at `/dev/shm/{lock_name}`.
+
+
 ---
 <a name="version-history"></a>
 ## Version History
