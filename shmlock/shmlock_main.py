@@ -574,7 +574,7 @@ class ShmLock(ShmModuleBaseLogger):
         """
         destructor
         """
-        self.release()
+        self.release(force=True)
         with self.__class__.instances_lock:
             if self in self.__class__.instances:
                 self.__class__.instances.remove(self)
