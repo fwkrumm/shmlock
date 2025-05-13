@@ -512,9 +512,21 @@ class ShmLock(ShmModuleBaseLogger):
             # any undesired behavior. this is "all good"
             pass
 
-    def release(self) -> bool:
+    def release(self, force: bool = False) -> bool:
         """
         release potentially acquired lock i.e. shm
+
+        Parameters
+        ----------
+        force : bool, optional
+            if True the lock will skip the check if lock has been acquired via contextmanager.
+            This means that code like
+            with lock:
+                lock.release(force=True)
+            would be theoretically possible. HOWEVER the use case of this parameter is to
+            force a release within a signal.sginal handler, if a process gets terminated
+            with the lock potentially being acquired via context manager. Details are provided
+            in the readme.
 
         Returns
         -------
@@ -529,7 +541,7 @@ class ShmLock(ShmModuleBaseLogger):
             if the lock could not be released properly
         """
 
-        if getattr(self._shm, "counter", 0) > 0:
+        if force is False and getattr(self._shm, "counter", 0) > 0:
             # for example if you try to release lock within context manager
             raise exceptions.ShmLockRuntimeError(f"lock {self} is still acquired by this "\
                 "thread via contextmanager.")

@@ -318,7 +318,7 @@ In case you expect the process being terminated abruptly, you should assure the 
 s = shmlock.ShmLock("lock_name")
 
 def cleanup(signum, frame):
-    s.release()
+    s.release(force=True)
     os._exit(0)
 
 signal.signal(signal.SIGTERM, cleanup)
