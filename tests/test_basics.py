@@ -84,8 +84,7 @@ class BasicsTest(unittest.TestCase):
 
         self.assertTrue(lock.acquire())
         with self.assertRaises(shmlock.shmlock_exceptions.ShmLockRuntimeError):
-            lock.acquire() # already acquired for this lockect
-
+            lock.acquire() # already acquired with this lock
         lock2 = shmlock.ShmLock(shm_name)
 
         # check expected behavior if lock already acquired
