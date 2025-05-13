@@ -261,6 +261,11 @@ class ShmLock(ShmModuleBaseLogger):
         bool
             True if lock acquired, False otherwise
         """
+
+        if self._config.pid != os.getpid():
+            raise exceptions.ShmLockRuntimeError("lock %s has been created in another process "\
+                "and cannot be used in this process. Do not shared locks among processes!", self)
+
         start_time = time.perf_counter()
         while (not self._config.exit_event.is_set()) and \
             (not timeout or time.perf_counter() - start_time < timeout):
@@ -508,6 +513,10 @@ class ShmLock(ShmModuleBaseLogger):
         RuntimeError
             if the lock could not be released properly
         """
+
+        if self._config.pid != os.getpid():
+            raise exceptions.ShmLockRuntimeError("lock %s has been created in another process "\
+                "and cannot be used in this process. Do not shared locks among processes!", self)
 
         if force is False and getattr(self._shm, "counter", 0) > 0:
             # for example if you try to release lock within context manager
