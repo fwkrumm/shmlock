@@ -19,6 +19,8 @@
 ## About
 
 Feel free to provide constructive feedback, suggestions, or feature requests. Thank you.
+This module is currently under development and may undergo frequent changes on the master branch.
+It is recommended to use a static version for testing.
 
 This module is an inter-process lock implementation that does not require passing around any objects.
 The lock can be used in multiple terminals or consoles by using the same name identifier.
@@ -34,7 +36,7 @@ Its underlying mechanism uses the multiprocessing.shared_memory module.
 | You want a lock without passing lock objects around | You do not want a lock that uses a polling interval (i.e. a sleep interval) |
 | You need a simple locking mechanism | You require very high performance and a large number of acquisitions |
 | You want to avoid file-based or server-client-based locks (like filelock, Redis, pyzmq, etc.) | You are not comfortable using shared memory as a lock mechanism |
-| You do not want the lock to add dependencies to your project | You need reentrancy  |
+| You do not want the lock to add dependencies to your project |   |
 
 
 So if you chose to use this module it is best to keep the number of synchronized accesses not too high.
@@ -117,12 +119,6 @@ with lock(timeout=1) as success:
         # sadness i.e. lock could not be acquired after specified timeout
         pass
 
-#
-# if you want a timeout and the world to know about the failed acquirement:
-#
-with lock(timeout=1, throw=True):
-    # your code here; if acquirement fails, TimeoutError is raised
-    pass
 
 # add description for debug purposes
 lock.description = "main process lock"
@@ -340,7 +336,7 @@ signal.signal(signal.SIGTERM, cleanup)
 | 1.0.0                      | First release version providing basic functionality |
 | 1.1.0                      | Add pypi workflow; minor corrections |
 | 2.0.0                      | Added `query_for_error_after_interrupt(...)` function, removed custom (experimental) resource tracker, added many tests for code coverage |
-| 2.1.0                      | Add reentrancy support |
+| 3.0.0                      | Add reentrancy support and remove throw parameter|
 
 ---
 <a name="todos"></a>

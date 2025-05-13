@@ -108,16 +108,6 @@ class BasicsTest(unittest.TestCase):
         self.assertFalse(lock2.acquire(timeout=1)) # positive timeout
         self.assertFalse(lock2.acquire(timeout=False)) # timeout False
 
-        with self.assertRaises(shmlock.shmlock_exceptions.ShmLockTimeoutError):
-            # test forced timeout throw
-            with lock2.lock(timeout=0.1, throw=True):
-                pass
-
-        with self.assertRaises(shmlock.shmlock_exceptions.ShmLockTimeoutError):
-            # test forced timeout throw
-            with lock2(timeout=0.1, throw=True):
-                pass
-
         with lock2(timeout=0.1) as res:
             self.assertFalse(res)
 

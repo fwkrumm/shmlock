@@ -52,9 +52,6 @@ class ShmLockConfig(): # pylint: disable=(too-many-instance-attributes)
         class
     timeout : float
         max timeout in seconds until lock acquirement is aborted
-    throw : bool
-        set to True if exception is supposed to be raised after
-        acquirement fails
     uuid : ShmUuid
         uuid of the lock
     description : str, optional
@@ -65,7 +62,6 @@ class ShmLockConfig(): # pylint: disable=(too-many-instance-attributes)
     exit_event: multiprocessing.synchronize.Event
     track: bool
     timeout: float
-    throw: bool
     uuid: ShmUuid
     description: str = "" # custom description
     pid: int = os.getpid() # process id of the lock instance (should stay the same as
@@ -132,7 +128,6 @@ class ShmLock(ShmModuleBaseLogger):
         self._config = ShmLockConfig(name=lock_name,
                                      poll_interval=float(poll_interval),
                                      timeout=None, # for __call__
-                                     throw=False, # for __call__
                                      exit_event=exit_event if exit_event is not None else Event(),
                                      track=None,
                                      uuid=ShmUuid())
@@ -165,7 +160,7 @@ class ShmLock(ShmModuleBaseLogger):
                f"description={self._config.description})"
 
     @contextmanager
-    def lock(self, timeout: float = None, throw: bool = False):
+    def lock(self, timeout: float = None):
         """
         lock method to be used as context manager
 
@@ -173,19 +168,11 @@ class ShmLock(ShmModuleBaseLogger):
         ----------
         timeout : float, optional
             max timeout in seconds until lock acquirement is aborted, by default None
-        throw : bool, optional
-            set to True if exception is supposed to be raised after
-            acquirement fails, by default False
 
         Yields
         ------
         bool
             True if lock acquired, False otherwise
-
-        Raises
-        ------
-        TimeoutError
-            if throw is True and lock acquirement fails
         """
         try:
             if self.acquire(timeout=timeout):
@@ -205,8 +192,6 @@ class ShmLock(ShmModuleBaseLogger):
             if self._shm.counter == 0:
                 # release the lock if counter is 0
                 self.release()
-        if throw:
-            raise exceptions.ShmLockTimeoutError(f"Could not acquire lock {self}")
         yield False
 
 
@@ -218,11 +203,6 @@ class ShmLock(ShmModuleBaseLogger):
         -------
         bool
             True if lock acquired, False otherwise
-
-        Raises
-        ------
-        TimeoutError
-            if self._config.throw is True and lock acquirement fails
         """
         # acquire the lock
         if self.acquire(timeout=self._config.timeout):
@@ -230,20 +210,16 @@ class ShmLock(ShmModuleBaseLogger):
             self.debug("lock acquired via __enter__ incremented counter to %d",
                        self._shm.counter)
             return True
-        if self._config.throw:
-            raise exceptions.ShmLockTimeoutError(f"Could not acquire lock {self}")
         return False
 
-    def __call__(self, timeout=None, throw=False):
+    def __call__(self, timeout=None):
         """
-        call stage of context manager. set timeout and throw as parameters
+        call stage of context manager. set timeout as parameter
 
         Parameters
         ----------
         timeout : _type_, optional
             max timeout for lock acquirement, by default None
-        throw : bool, optional
-            if lock acquirement fails -> throw, by default False
 
         Returns
         -------
@@ -251,7 +227,6 @@ class ShmLock(ShmModuleBaseLogger):
             ...
         """
         self._config.timeout = timeout
-        self._config.throw = throw
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
