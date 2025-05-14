@@ -320,8 +320,9 @@ class ShmLock(ShmModuleBaseLogger):
         """
 
         if self._config.pid != os.getpid():
-            raise exceptions.ShmLockRuntimeError("lock %s has been created in another process "\
-                "and cannot be used in this process. Do not shared locks among processes!", self)
+            raise exceptions.ShmLockRuntimeError(f"lock {self} has been created in another "\
+                                                 "process and cannot be used in this process. "\
+                                                 "Do not shared locks among processes!")
 
         start_time = time.perf_counter()
         while (not self._config.exit_event.is_set()) and \
@@ -572,8 +573,12 @@ class ShmLock(ShmModuleBaseLogger):
         """
 
         if self._config.pid != os.getpid():
-            raise exceptions.ShmLockRuntimeError("lock %s has been created in another process "\
-                "and cannot be used in this process. Do not shared locks among processes!", self)
+            raise exceptions.ShmLockRuntimeError(f"lock {self} has been created in another "\
+                                                 "process and cannot be used in this process. "\
+                                                 "Do not shared locks among processes! If " \
+                                                 "shared memory has already been acquired this "\
+                                                 "might lead to a deadlock and/or leaking "\
+                                                 f"resource: shared memory is {self._shm}")
 
         if force is False and getattr(self._shm, "counter", 0) > 0:
             # for example if you try to release lock within context manager
