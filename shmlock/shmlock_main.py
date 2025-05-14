@@ -30,59 +30,6 @@ from shmlock.shmlock_uuid import ShmUuid
 LOCK_SHM_SIZE = 16 # size of the shared memory block in bytes to store uuid
 
 # should go to own class file
-class FakeEvent():
-    """
-    fake event class to be used if no exit event is supposed to be used (explicitly requested
-    by user).
-    """
-    def __init__(self):
-        """
-        fake event class to be used if no exit event is supposed to be used
-        """
-        self._is_set = False
-
-    def clear(self):
-        """
-        clear the event
-        """
-        self._is_set = False
-
-    def set(self):
-        """
-        set the event
-        """
-        self._is_set = True
-
-    def is_set(self) -> bool:
-        """
-        check if the event is set
-
-        Returns
-        -------
-        bool
-            True if the event is set, False otherwise
-        """
-        return self._is_set
-
-    def wait(self, timeout: float | int):
-        """
-        wait for the event to be set; in case no event is used the sleep will be provided
-        by time.sleep() functiion.
-
-        note that this is not a blocking wait of course i.e. the sleep will block until it
-        is finished. it is encouranged to use either multiprocessing.Event or threading.Event
-
-        Parameters
-        ----------
-        timeout : float | int
-            time to wait for the event to be set in seconds
-        """
-        if not self._is_set:
-            time.sleep(timeout)
-            return False # for real events this returns True as soon as the event is set
-        return True
-
-# should go to own class file
 @dataclass
 class ShmLockConfig(): # pylint: disable=(too-many-instance-attributes)
     """
@@ -112,7 +59,7 @@ class ShmLockConfig(): # pylint: disable=(too-many-instance-attributes)
     """
     name: str
     poll_interval: float
-    exit_event: multiprocessing.synchronize.Event | threading.Event | FakeEvent
+    exit_event: multiprocessing.synchronize.Event | threading.Event
     track: bool
     timeout: float
     uuid: ShmUuid
@@ -132,7 +79,7 @@ class ShmLock(ShmModuleBaseLogger):
                  lock_name: str,
                  poll_interval: float|int = 0.05,
                  logger: logging.Logger = None,
-                 exit_event: multiprocessing.synchronize.Event | threading.Event | bool = None,
+                 exit_event: multiprocessing.synchronize.Event | threading.Event = None,
                  track: bool = None):
         """
         default init. set shared memory name (for lock) and poll_interval.
@@ -174,18 +121,11 @@ class ShmLock(ShmModuleBaseLogger):
         if not lock_name:
             raise exceptions.ShmLockValueError("lock_name must not be empty")
 
-        if exit_event is None:
-            exit_event = Event()
-        elif exit_event is False:
-            # if exit_event is set to False we do not want to use it
-            exit_event = FakeEvent()
-        # else: exit event has been set to be a multiprocessing event
-
         # create config containing all parameters
         self._config = ShmLockConfig(name=lock_name,
                                      poll_interval=float(poll_interval),
                                      timeout=None, # for __call__
-                                     exit_event=exit_event,
+                                     exit_event=exit_event if exit_event is not None else Event(),
                                      track=None,
                                      uuid=ShmUuid(),
                                      pid = os.getpid())
@@ -681,7 +621,7 @@ class ShmLock(ShmModuleBaseLogger):
         """
         self._config.description = description
 
-    def get_exit_event(self) -> multiprocessing.synchronize.Event | threading.Event | FakeEvent:
+    def get_exit_event(self) -> multiprocessing.synchronize.Event | threading.Event:
         """
         get exit event; if lock should be stopped/prevent from further acquirements, set this
         event.
