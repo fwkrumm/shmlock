@@ -19,10 +19,10 @@
 ## About
 
 Feel free to provide constructive feedback, suggestions, or feature requests. Thank you.
+This module is currently under development and may undergo frequent changes on the master branch.
+It is recommended to use a static version for testing.
 
-This module is an inter-process lock implementation that does not require passing around any objects.
-The lock can be used in multiple terminals or consoles by using the same name identifier.
-Its underlying mechanism uses the multiprocessing.shared_memory module.
+This module provides an inter-process lock implementation, eliminating the need to pass around objects for synchronization.  Designed for seamless integration across multiple terminals or consoles, it enables reliable process locking simply by referencing a shared name identifier. Under the hood, the module leverages Python’s `multiprocessing.shared_memory`.
 
 ---
 <a name="pros-and-cons-when-to-use-this-module-and-when-not-to"></a>
@@ -34,7 +34,7 @@ Its underlying mechanism uses the multiprocessing.shared_memory module.
 | You want a lock without passing lock objects around | You do not want a lock that uses a polling interval (i.e. a sleep interval) |
 | You need a simple locking mechanism | You require very high performance and a large number of acquisitions |
 | You want to avoid file-based or server-client-based locks (like filelock, Redis, pyzmq, etc.) | You are not comfortable using shared memory as a lock mechanism |
-| You do not want the lock to add dependencies to your project | You need reentrancy  |
+| You do not want the lock to add dependencies to your project |   |
 
 
 So if you chose to use this module it is best to keep the number of synchronized accesses not too high.
@@ -44,14 +44,14 @@ So if you chose to use this module it is best to keep the number of synchronized
 <a id="installation"></a>
 ## Installation
 
-This module itself has no additional dependencies. There are multiple ways to install this module:
+This module has no additional dependencies. There are several ways to install it:
 
-1. (WIP) From Python Package Index:
+1. Via the Python Package Index (available from version 3.0.0 onward; older versions can be accessed through git tags):
 `pip install shmlock`
 
 2. Install directly from the repository:
 `pip install git+https://github.com/fwkrumm/shmlock@master`
-for latest version or
+for the latest version or
 ```
 pip install git+https://github.com/fwkrumm/shmlock@X.Y.Z
 ```
@@ -117,18 +117,9 @@ with lock(timeout=1) as success:
         # sadness i.e. lock could not be acquired after specified timeout
         pass
 
-#
-# if you want a timeout and the world to know about the failed acquirement:
-#
-with lock(timeout=1, throw=True):
-    # your code here; if acquirement fails, TimeoutError is raised
-    pass
 
 # add description for debug purposes
 lock.description = "main process lock"
-
-# list all created lock instances
-print(shmlock.ShmLock.get_instances_list())
 
 # get exit event and set it in the main process to stop all locks from acquiring
 lock.get_exit_event()
@@ -143,6 +134,13 @@ print(lock.uuid)
 
 # check if lock is currently acquired
 print(lock.acquired)
+
+# the lock is reentrant:
+with lock:
+    with lock:
+        pass
+    # still locked, lock.release() would raise Exception instead force parameter is used
+
 ```
 
 ---
@@ -318,7 +316,7 @@ In case you expect the process being terminated abruptly, you should assure the 
 s = shmlock.ShmLock("lock_name")
 
 def cleanup(signum, frame):
-    s.release()
+    s.release(force=True)
     os._exit(0)
 
 signal.signal(signal.SIGTERM, cleanup)
@@ -336,12 +334,11 @@ However, please note that in some situations, you might not be able to recover f
 | 1.0.0                      | First release version providing basic functionality |
 | 1.1.0                      | Add pypi workflow; minor corrections |
 | 2.0.0                      | Added `query_for_error_after_interrupt(...)` function, removed custom (experimental) resource tracker, added many tests for code coverage |
-
+| 3.0.0                      | Add reentrancy support and remove throw parameter|
 
 ---
 <a name="todos"></a>
 <a id="todos"></a>
 ## ToDos
 
-- add reentrancy (WIP)
 - upload to PyPI (WIP)

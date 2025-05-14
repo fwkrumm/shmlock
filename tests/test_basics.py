@@ -72,8 +72,23 @@ class BasicsTest(unittest.TestCase):
         self.assertRaises(RuntimeError, test_func)
         try:
             self.assertTrue(lock.acquire()) # lock should be acquired again
-        finally:                              # i.e. shm should not be blocked
+        finally:                            # i.e. shm should not be blocked
             lock.release()
+
+    def test_reentrant_lock(self):
+        """
+        test that the lock is reentrant
+        """
+        shm_name = str(time.time())
+        lock = shmlock.ShmLock(shm_name)
+
+        with lock: # __enter__
+            with lock.lock(): # contextmanager
+                # this should not block
+                pass
+            self.assertTrue(lock.acquired)
+
+        self.assertFalse(lock.acquired) # lock should be released now
 
     def test_lock_release(self):
         """
@@ -83,23 +98,15 @@ class BasicsTest(unittest.TestCase):
         lock = shmlock.ShmLock(shm_name)
 
         self.assertTrue(lock.acquire())
-        with self.assertRaises(shmlock.shmlock_exceptions.ShmLockRuntimeError):
-            lock.acquire() # already acquired with this lock
+
+        # due to reentrant lock, this should not block and also return True
+        self.assertTrue(lock.acquire())
+
         lock2 = shmlock.ShmLock(shm_name)
 
         # check expected behavior if lock already acquired
         self.assertFalse(lock2.acquire(timeout=1)) # positive timeout
         self.assertFalse(lock2.acquire(timeout=False)) # timeout False
-
-        with self.assertRaises(shmlock.shmlock_exceptions.ShmLockTimeoutError):
-            # test forced timeout throw
-            with lock2.lock(timeout=0.1, throw=True):
-                pass
-
-        with self.assertRaises(shmlock.shmlock_exceptions.ShmLockTimeoutError):
-            # test forced timeout throw
-            with lock2(timeout=0.1, throw=True):
-                pass
 
         with lock2(timeout=0.1) as res:
             self.assertFalse(res)
@@ -143,8 +150,8 @@ class BasicsTest(unittest.TestCase):
         self.assertEqual(lock.debug_get_uuid_of_locking_lock(), lock.uuid)
 
         # switch acquiring locks
-        lock.release()
-        lock2.acquire()
+        self.assertTrue(lock.release())
+        self.assertTrue(lock2.acquire())
 
         # check that the uuid of lock2 is returned
         self.assertEqual(lock2.debug_get_uuid_of_locking_lock(), lock2.uuid)
@@ -166,13 +173,13 @@ class BasicsTest(unittest.TestCase):
             lock = shmlock.ShmLock(shm_name, logger=log)
 
             # just check that they do not throw exceptions if no logger is set and with logger
-            lock.info("test info")
-            lock.debug("test debug")
-            lock.warning("test warning")
-            lock.warn("test warn")
-            lock.error("test error")
-            lock.exception("test exception")
-            lock.critical("test critical")
+            lock.info("base logger test info")
+            lock.debug("base logger test debug")
+            lock.warning("base logger test warning")
+            lock.warn("base logger test warn")
+            lock.error("base logger test error")
+            lock.exception("base logger test exception")
+            lock.critical("base logger test critical")
 
     def test_repr(self):
         """
@@ -194,6 +201,21 @@ class BasicsTest(unittest.TestCase):
         self.assertEqual(uuid_bytes, ShmUuid.string_to_bytes(uuid_str))
         self.assertEqual(uuid_str, ShmUuid.byte_to_string(uuid_bytes))
         self.assertIsNotNone(repr(uuid))
+
+    def test_exceptions_at_release_within_contextmanager(self):
+        """
+        test that exceptions are raised if release is called within the context manager
+        """
+        shm_name = str(time.time())
+        lock = shmlock.ShmLock(shm_name)
+
+        with self.assertRaises(shmlock.shmlock_exceptions.ShmLockRuntimeError):
+            with lock.lock():
+                lock.release()
+
+        with self.assertRaises(shmlock.shmlock_exceptions.ShmLockRuntimeError):
+            with lock:
+                lock.release()
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

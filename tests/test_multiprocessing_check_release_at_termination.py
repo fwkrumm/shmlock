@@ -42,7 +42,7 @@ def acquire_lock_worker():
     s = shmlock.ShmLock(LOCK_NAME, track=False if sys.version_info >= (3, 13) else None)
 
     def cleanup(signum, frame): # pylint:disable=(unused-argument)
-        s.release()
+        s.release(force=True)
         os._exit(0) # pylint:disable=(protected-access)
 
     signal.signal(signal.SIGTERM, cleanup)
