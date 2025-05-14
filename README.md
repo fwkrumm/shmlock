@@ -46,14 +46,14 @@ So if you chose to use this module it is best to keep the number of synchronized
 <a id="installation"></a>
 ## Installation
 
-This module itself has no additional dependencies. There are multiple ways to install this module:
+This module has no additional dependencies. There are several ways to install it:
 
-1. (WIP) From Python Package Index:
+1. Via the Python Package Index (available from version 3.0.0 onward; older versions can be accessed through git tags):
 `pip install shmlock`
 
 2. Install directly from the repository:
 `pip install git+https://github.com/fwkrumm/shmlock@master`
-for latest version or
+for the latest version or
 ```
 pip install git+https://github.com/fwkrumm/shmlock@X.Y.Z
 ```
