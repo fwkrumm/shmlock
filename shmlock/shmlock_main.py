@@ -501,7 +501,7 @@ class ShmLock(ShmModuleBaseLogger):
             with lock:
                 lock.release(force=True)
             would be theoretically possible. HOWEVER the use case of this parameter is to
-            force a release within a signal.sginal handler, if a process gets terminated
+            force a release within a signal.signal handler, if a process gets terminated
             with the lock potentially being acquired via context manager. Details are provided
             in the readme.
 
