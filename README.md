@@ -123,9 +123,6 @@ with lock(timeout=1) as success:
 # add description for debug purposes
 lock.description = "main process lock"
 
-# list all created lock instances
-print(shmlock.ShmLock.get_instances_list())
-
 # get exit event and set it in the main process to stop all locks from acquiring
 lock.get_exit_event()
 
