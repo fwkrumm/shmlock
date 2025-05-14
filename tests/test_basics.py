@@ -202,7 +202,7 @@ class BasicsTest(unittest.TestCase):
         self.assertEqual(uuid_str, ShmUuid.byte_to_string(uuid_bytes))
         self.assertIsNotNone(repr(uuid))
 
-    def test_exceptions_at_releast_within_contextmanager(self):
+    def test_exceptions_at_release_within_contextmanager(self):
         """
         test that exceptions are raised if release is called within the context manager
         """
