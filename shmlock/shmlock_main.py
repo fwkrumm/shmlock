@@ -106,14 +106,14 @@ class ShmLockConfig(): # pylint: disable=(too-many-instance-attributes)
     """
     name: str
     poll_interval: float
-    exit_event: multiprocessing.synchronize.Event | threading.Event
+    exit_event: multiprocessing.synchronize.Event | threading.Event | FakeEvent
     track: bool
     timeout: float
     uuid: ShmUuid
+    pid: int # process id of the lock instance (should stay the same as
+             # long as the user does not share the lock via forking which is
+             # STRONGLY DISCOURAGED!)
     description: str = "" # custom description
-    pid: int = os.getpid() # process id of the lock instance (should stay the same as
-                           # long as the user does not share the lock via forking which is
-                           # STRONGLY DISCOURAGED!)
 
 
 class ShmLock(ShmModuleBaseLogger):
@@ -126,7 +126,7 @@ class ShmLock(ShmModuleBaseLogger):
                  lock_name: str,
                  poll_interval: float|int = 0.05,
                  logger: logging.Logger = None,
-                 exit_event: multiprocessing.synchronize.Event | threading.Event | False = None,
+                 exit_event: multiprocessing.synchronize.Event | threading.Event | bool = None,
                  track: bool = None):
         """
         default init. set shared memory name (for lock) and poll_interval.
@@ -161,7 +161,7 @@ class ShmLock(ShmModuleBaseLogger):
             raise exceptions.ShmLockValueError("poll_interval must be a float or int and > 0")
         if not isinstance(lock_name, str):
             raise exceptions.ShmLockValueError("lock_name must be a string")
-        if exit_event is not None and \
+        if exit_event and \
             not isinstance(exit_event, multiprocessing.synchronize.Event):
             raise exceptions.ShmLockValueError("exit_event must be a multiprocessing.Event")
 
@@ -181,7 +181,8 @@ class ShmLock(ShmModuleBaseLogger):
                                      timeout=None, # for __call__
                                      exit_event=exit_event,
                                      track=None,
-                                     uuid=ShmUuid())
+                                     uuid=ShmUuid(),
+                                     pid = os.getpid())
 
         if track is not None:
             # track parameter not supported for python < 3.13
