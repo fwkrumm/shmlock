@@ -69,12 +69,18 @@ class FakeEvent():
         wait for the event to be set; in case no event is used the sleep will be provided
         by time.sleep() functiion.
 
+        note that this is not a blocking wait of course i.e. the sleep will block until it
+        is finished. it is encouranged to use either multiprocessing.Event or threading.Event
+
         Parameters
         ----------
         timeout : float | int
             time to wait for the event to be set in seconds
         """
-        time.sleep(timeout)
+        if not self._is_set:
+            time.sleep(timeout)
+            return False # for real events this returns True as soon as the event is set
+        return True
 
 # should go to own class file
 @dataclass
@@ -572,13 +578,18 @@ class ShmLock(ShmModuleBaseLogger):
             if the lock could not be released properly
         """
 
-        if self._config.pid != os.getpid():
-            raise exceptions.ShmLockRuntimeError(f"lock {self} has been created in another "\
-                                                 "process and cannot be used in this process. "\
-                                                 "Do not shared locks among processes! If " \
-                                                 "shared memory has already been acquired this "\
-                                                 "might lead to a deadlock and/or leaking "\
-                                                 f"resource: shared memory is {self._shm}")
+        try:
+            if self._config.pid != os.getpid():
+                raise exceptions.ShmLockRuntimeError(f"lock {self} has been created in another "\
+                                                    "process and cannot be used in this process. "\
+                                                    "Do not shared locks among processes! If " \
+                                                    "shared memory has already been acquired this "\
+                                                    "might lead to a deadlock and/or leaking "\
+                                                    f"resource: shared memory is {self._shm}")
+        except AttributeError:
+            # if exception is thrown before config has been defined during __init__ e.g. due to
+            # failed type check
+            pass
 
         if force is False and getattr(self._shm, "counter", 0) > 0:
             # for example if you try to release lock within context manager

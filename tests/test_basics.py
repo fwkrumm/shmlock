@@ -217,5 +217,21 @@ class BasicsTest(unittest.TestCase):
             with lock:
                 lock.release()
 
+    def test_fake_event(self):
+        """
+        test that the fake event is created and can be used
+        """
+        shm_name = str(time.time())
+        lock = shmlock.ShmLock(shm_name, exit_event=False)
+
+        # check fake exit event and api
+        self.assertTrue(isinstance(lock.get_exit_event(), shmlock.shmlock_main.FakeEvent))
+        self.assertFalse(lock.get_exit_event().is_set())
+        self.assertFalse(lock.get_exit_event().wait(0.1))
+        lock.get_exit_event().set()
+        self.assertTrue(lock.get_exit_event().is_set())
+        self.assertTrue(lock.get_exit_event().wait(0.1))
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
