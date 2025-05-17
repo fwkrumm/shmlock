@@ -327,7 +327,7 @@ However, please note that in some situations, you might not be able to recover f
 | 1.1.0                      | Add pypi workflow; minor corrections |
 | 2.0.0                      | Added `query_for_error_after_interrupt(...)` function, removed custom (experimental) resource tracker, added many tests for code coverage |
 | 3.0.0                      | Add reentrancy support and remove throw parameter |
-| 3.0.1                      | Minor adjustments in README.md |
+| 3.0.1                      | Minor adjustments in README.md and some workflow files |
 
 ---
 <a name="todos"></a>
