@@ -334,4 +334,4 @@ However, please note that in some situations, you might not be able to recover f
 <a id="todos"></a>
 ## ToDos
 
-- upload to PyPI (WIP)
+- TBD
