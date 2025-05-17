@@ -139,7 +139,7 @@ print(lock.acquired)
 with lock:
     with lock:
         pass
-    # still locked, lock.release() would raise Exception instead force parameter is used
+    # still locked, lock.release() would raise Exception unless force parameter is used
 
 ```
 
@@ -176,6 +176,7 @@ you will (non-deterministically) get
 
 ![multiple_nok](./docs/assets/example_multiple_nok.png)
 
+
 This happens if a race condition occurs, i.e., one instance overwrote the value already extracted by another instance before it could increment and store the value. This does not happen if the locking mechanism is used.
 
 ### ./examples/performance_analysis/run_perf.py
@@ -210,15 +211,6 @@ INFO:PerformanceLogger:average time: 0.000412s
 INFO:PerformanceLogger:max time: 0.392681s
 INFO:PerformanceLogger:min time: 0.000045s
 INFO:PerformanceLogger:standard deviation: 0.008226s
-INFO:PerformanceLogger:Result buffer: 15000 (should be 15000)
-
-
-INFO:PerformanceLogger:Running test type shmlock_with_resource_tracking
-INFO:PerformanceLogger:Test type shmlock_with_resource_tracking:
-INFO:PerformanceLogger:average time: 0.000499s
-INFO:PerformanceLogger:max time: 0.412015s
-INFO:PerformanceLogger:min time: 0.000046s
-INFO:PerformanceLogger:standard deviation: 0.009216s
 INFO:PerformanceLogger:Result buffer: 15000 (should be 15000)
 
 
@@ -334,11 +326,12 @@ However, please note that in some situations, you might not be able to recover f
 | 1.0.0                      | First release version providing basic functionality |
 | 1.1.0                      | Add pypi workflow; minor corrections |
 | 2.0.0                      | Added `query_for_error_after_interrupt(...)` function, removed custom (experimental) resource tracker, added many tests for code coverage |
-| 3.0.0                      | Add reentrancy support and remove throw parameter|
+| 3.0.0                      | Add reentrancy support and remove throw parameter |
+| 3.0.1                      | Minor adjustments in README.md and some workflow files |
 
 ---
 <a name="todos"></a>
 <a id="todos"></a>
 ## ToDos
 
-- upload to PyPI (WIP)
+- TBD
