@@ -14,6 +14,7 @@ from multiprocessing import shared_memory
 from multiprocessing import Event
 from contextlib import contextmanager
 import logging
+from typing import Union
 
 __all__ = ["ShmLock",
            "remove_shm_from_resource_tracker",
@@ -39,7 +40,7 @@ class ShmLock(ShmModuleBaseLogger):
                  lock_name: str,
                  poll_interval: float|int = 0.05,
                  logger: logging.Logger = None,
-                 exit_event: multiprocessing.synchronize.Event | threading.Event = None,
+                 exit_event: Union[multiprocessing.synchronize.Event, threading.Event] = None,
                  track: bool = None):
         """
         default init. set shared memory name (for lock) and poll_interval.
@@ -581,7 +582,7 @@ class ShmLock(ShmModuleBaseLogger):
         """
         self._config.description = description
 
-    def get_exit_event(self) -> multiprocessing.synchronize.Event | threading.Event:
+    def get_exit_event(self) -> Union[multiprocessing.synchronize.Event, threading.Event]:
         """
         get exit event; if lock should be stopped/prevent from further acquirements, set this
         event.
@@ -595,7 +596,7 @@ class ShmLock(ShmModuleBaseLogger):
         """
         return self._config.exit_event
 
-    def debug_get_uuid_of_locking_lock(self) -> str | None:
+    def debug_get_uuid_of_locking_lock(self) -> Union[str , None]:
         """
         get uuid of the locking lock
 

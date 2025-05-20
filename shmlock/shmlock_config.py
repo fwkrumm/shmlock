@@ -9,6 +9,7 @@ import multiprocessing
 import multiprocessing.synchronize
 import threading
 from dataclasses import dataclass
+from typing import Union
 
 from shmlock.shmlock_uuid import ShmUuid
 
@@ -41,7 +42,7 @@ class ShmLockConfig(): # pylint: disable=(too-many-instance-attributes)
     """
     name: str
     poll_interval: float
-    exit_event: multiprocessing.synchronize.Event | threading.Event
+    exit_event: Union[multiprocessing.synchronize.Event, threading.Event]
     track: bool
     timeout: float
     uuid: ShmUuid
