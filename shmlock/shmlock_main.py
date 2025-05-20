@@ -200,7 +200,7 @@ class ShmLock(ShmModuleBaseLogger):
         # acquire the lock
         if self.acquire(timeout=self._config.timeout):
             self._shm.counter = getattr(self._shm, "counter", 0) + 1
-            self.debug("lock acquired via __enter__ incremented thread counter to %d",
+            self.debug("lock acquired via __enter__ incremented thread ref counter to %d",
                        self._shm.counter)
             return True
         return False
