@@ -38,7 +38,7 @@ class ShmLock(ShmModuleBaseLogger):
 
     def __init__(self,
                  lock_name: str,
-                 poll_interval: float|int = 0.05,
+                 poll_interval: Union[float, int] = 0.05,
                  logger: logging.Logger = None,
                  exit_event: Union[multiprocessing.synchronize.Event, threading.Event] = None,
                  track: bool = None):
