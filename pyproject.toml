@@ -5,7 +5,7 @@ build-backend = "pdm.backend"
 [project]
 name = "shmlock"
 dynamic = ["version"]
-description = "Implementation of an inter-process lock based on multiprocessing’s shared memory module."
+description = "This module provides an inter-process lock implementation, eliminating the need to pass around objects for synchronization. Under the hood, the module leverages the shared_memory module."
 long_description = "file: README.md"
 long_description_content_type = "text/markdown"
 readme = "README.md"

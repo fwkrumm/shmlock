@@ -13,7 +13,6 @@ import multiprocessing.synchronize
 from multiprocessing import shared_memory
 from multiprocessing import Event
 from contextlib import contextmanager
-from dataclasses import dataclass
 import logging
 
 __all__ = ["ShmLock",
