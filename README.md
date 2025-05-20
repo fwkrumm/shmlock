@@ -385,6 +385,7 @@ However, please note that in some situations, you might not be able to recover f
 | 3.0.0                      | Add reentrancy support and remove throw parameter |
 | 3.0.1                      | Minor adjustments in README.md and some workflow files |
 | 3.0.2                      | Added example code to README.md |
+| 3.0.3                      | ShmLockConfig moved to separate file |
 
 ---
 <a name="todos"></a>
