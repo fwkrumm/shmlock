@@ -23,6 +23,8 @@ This module is currently under development and may undergo frequent changes on t
 It is recommended to use a static version for testing.
 
 This module provides an inter-process lock implementation, eliminating the need to pass around objects for synchronization.  Designed for seamless integration across multiple terminals or consoles, it enables reliable process locking simply by referencing a shared name identifier. Under the hood, the module leverages Python’s `multiprocessing.shared_memory`.
+In real-world scenarios, a lock is used to synchronize access to shared resources across multiple Python instances, such as different terminals.
+Notable examples include a file or a shared memory block, which may be modified by multiple actors; see the real-world example in Section [Quick Dive](#quick-dive) and comments therein for more details.
 
 ---
 <a name="pros-and-cons-when-to-use-this-module-and-when-not-to"></a>
@@ -140,6 +142,60 @@ with lock:
     with lock:
         pass
     # still locked, lock.release() would raise Exception unless force parameter is used
+
+```
+
+### Real-world Example
+
+A simple example demonstrating the actual use of a lock is the following code, which should run across different terminals.
+The reference counter is incremented synchronously, and each terminal writes a 16-byte UUID to the shared memory block in a synchronized manner.
+
+Additionally, the `unlink()` function (only relevant for POSIX) is only called when the last terminal executing the code has closed.
+
+```python
+from multiprocessing import shared_memory
+import shmlock
+import time
+import uuid
+
+lock = shmlock.ShmLock("lock_name ")
+
+# create (attach to) shared memory for synchronized access
+try:
+    shm = shared_memory.SharedMemory(name="shm_name", create=True, size=17) # buffer layout: 1 byte for the reference counter (to track usage), followed by 16 bytes for the UUID (a 128-bit unique identifier).
+except FileExistsError:
+    shm = shared_memory.SharedMemory(name="shm_name")
+
+with lock:
+    # increment ref counter (synchronized with lock)
+    shm.buf[0] += 1
+    print("ref count incremented to", shm.buf[0])
+
+try:
+
+    while True:
+
+        with lock:
+            print("lock acquired; current ref count is", shm.buf[0])
+            # write uuid (or any other payload) to shared memory block
+            uuid_bytes = uuid.uuid4().bytes
+            shm.buf[1:1+len(uuid_bytes)] = uuid_bytes
+        time.sleep(1) # prevent spam
+
+except KeyboardInterrupt:
+    print("KeyboardInterrupt received, exiting...")
+
+finally:
+    with lock:
+        shm.buf[0] -= 1
+        ref_count = shm.buf[0]
+        print("ref count decremented to", ref_count)
+    shm.close()
+    if ref_count == 0:
+        shm.unlink()
+        print("shared memory unlinked since last reference released")
+
+# the lock does not require any additional release as long as the process did not terminate abruptly.
 
 ```
 
@@ -311,7 +367,7 @@ def cleanup(signum, frame):
     s.release(force=True)
     os._exit(0)
 
-signal.signal(signal.SIGTERM, cleanup)
+signal.signal(signal.SIGTERM, cleanup) # and/or signal.SIGINT for KeyboardInterrupt
 ```
 
 However, please note that in some situations, you might not be able to recover from an interruption. One example on POSIX is when the shared memory mmap has been created at `/dev/shm/` but has not yet been filled—i.e., it has a size of zero—and the process is interrupted. In this case, you can neither create shared memory with that name (`FileExistsError`) nor attach to it (`ValueError`). The previously mentioned `query_for_error_after_interrupt(...)` will report this error; however, you will have to manually delete the mmap file at `/dev/shm/{lock_name}`.
@@ -328,6 +384,7 @@ However, please note that in some situations, you might not be able to recover f
 | 2.0.0                      | Added `query_for_error_after_interrupt(...)` function, removed custom (experimental) resource tracker, added many tests for code coverage |
 | 3.0.0                      | Add reentrancy support and remove throw parameter |
 | 3.0.1                      | Minor adjustments in README.md and some workflow files |
+| 3.0.2                      | Added example code to README.md |
 
 ---
 <a name="todos"></a>

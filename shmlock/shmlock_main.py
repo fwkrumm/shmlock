@@ -170,7 +170,7 @@ class ShmLock(ShmModuleBaseLogger):
         try:
             if self.acquire(timeout=timeout):
                 self._shm.counter = getattr(self._shm, "counter", 0) + 1
-                self.debug("lock acquired via contextmanager incremented counter to %d",
+                self.debug("lock acquired via contextmanager incremented thread ref counter to %d",
                            self._shm.counter)
                 yield True
                 return
@@ -179,7 +179,7 @@ class ShmLock(ShmModuleBaseLogger):
             # that counter never becomes negative); this would otherwise happen if one would
             # (for whatever reason) call release() multiple times without acquiring the lock
             self._shm.counter = max(getattr(self._shm, "counter", 1) - 1, 0)
-            self.debug("lock %s decremented counter to %d",
+            self.debug("lock %s decremented thread ref counter to %d",
                     self,
                     self._shm.counter)
             if self._shm.counter == 0:
@@ -200,7 +200,7 @@ class ShmLock(ShmModuleBaseLogger):
         # acquire the lock
         if self.acquire(timeout=self._config.timeout):
             self._shm.counter = getattr(self._shm, "counter", 0) + 1
-            self.debug("lock acquired via __enter__ incremented counter to %d",
+            self.debug("lock acquired via __enter__ incremented thread ref counter to %d",
                        self._shm.counter)
             return True
         return False
@@ -236,7 +236,7 @@ class ShmLock(ShmModuleBaseLogger):
             ...
         """
         self._shm.counter = max(getattr(self._shm, "counter", 1) - 1, 0)
-        self.debug("lock %s decremented counter to %d",
+        self.debug("lock %s decremented thread ref counter to %d",
                 self,
                 self._shm.counter)
         if self._shm.counter == 0:
@@ -534,7 +534,7 @@ class ShmLock(ShmModuleBaseLogger):
         if force is False and getattr(self._shm, "counter", 0) > 0:
             # for example if you try to release lock within context manager
             raise exceptions.ShmLockRuntimeError(f"lock {self} is still acquired by this "\
-                "thread via contextmanager.")
+                "thread via contextmanager or __enter__ call.")
 
         if getattr(self._shm, "shm", None) is not None:
             # only release if shared memory reference has been set and counter reached 0.
