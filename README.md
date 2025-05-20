@@ -162,7 +162,7 @@ lock = shmlock.ShmLock("lock_name ")
 
 # create (attach to) shared memory for synchronized access
 try:
-    shm = shared_memory.SharedMemory(name="shm_name", create=True, size=17) # first byte ref counter, remaining bytes will be the uuid
+    shm = shared_memory.SharedMemory(name="shm_name", create=True, size=17) # buffer layout: 1 byte for the reference counter (to track usage), followed by 16 bytes for the UUID (a 128-bit unique identifier).
 except FileExistsError:
     shm = shared_memory.SharedMemory(name="shm_name")
 
