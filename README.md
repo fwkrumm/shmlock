@@ -24,7 +24,7 @@ It is recommended to use a static version for testing.
 
 This module provides an inter-process lock implementation, eliminating the need to pass around objects for synchronization.  Designed for seamless integration across multiple terminals or consoles, it enables reliable process locking simply by referencing a shared name identifier. Under the hood, the module leverages Python’s `multiprocessing.shared_memory`.
 In real-world scenarios, a lock is used to synchronize access to shared resources across multiple Python instances, such as different terminals.
-Notable examples include a file or a shared memory block, which may be modified by multiple actors.
+Notable examples include a file or a shared memory block, which may be modified by multiple actors; see the real-world example in Section [Quick Dive](#quick-dive) and comments therein for more details.
 
 ---
 <a name="pros-and-cons-when-to-use-this-module-and-when-not-to"></a>
