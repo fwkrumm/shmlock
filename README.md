@@ -158,13 +158,13 @@ import shmlock
 import time
 import uuid
 
-lock = shmlock.ShmLock("some_unique_identifier")
+lock = shmlock.ShmLock("lock_name ")
 
 # create (attach to) shared memory for synchronized access
 try:
-    shm = shared_memory.SharedMemory(name="some_other_unique_name", create=True, size=17) # first byte ref counter, remaining bytes will be the uuid
+    shm = shared_memory.SharedMemory(name="shm_name", create=True, size=17) # first byte ref counter, remaining bytes will be the uuid
 except FileExistsError:
-    shm = shared_memory.SharedMemory(name="some_other_unique_name")
+    shm = shared_memory.SharedMemory(name="shm_name")
 
 with lock:
     # increment ref counter (synchronized with lock)
