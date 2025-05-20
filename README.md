@@ -22,7 +22,7 @@ Feel free to provide constructive feedback, suggestions, or feature requests. Th
 This module is currently under development and may undergo frequent changes on the master branch.
 It is recommended to use a static version for testing.
 
-This module provides an inter-process lock implementation, eliminating the need to pass around objects for synchronization.  Designed for seamless integration across multiple terminals or consoles, it enables reliable process locking simply by referencing a shared name identifier. Under the hood, the module leverages Python’s `multiprocessing.shared_memory`.
+This module provides an inter-process lock implementation, eliminating the need to pass around objects for synchronization. Designed for seamless integration across multiple terminals or consoles, it enables reliable process locking simply by referencing a shared name identifier. Under the hood, the module leverages Python’s `multiprocessing.shared_memory`.
 In real-world scenarios, a lock is used to synchronize access to shared resources across multiple Python instances, such as different terminals.
 Notable examples include a file or a shared memory block, which may be modified by multiple actors; see the real-world example in Section [Quick Dive](#quick-dive) and comments therein for more details.
 
@@ -385,7 +385,7 @@ However, please note that in some situations, you might not be able to recover f
 | 3.0.0                      | Add reentrancy support and remove throw parameter |
 | 3.0.1                      | Minor adjustments in README.md and some workflow files |
 | 3.0.2                      | Added example code to README.md |
-| 3.0.3                      | ShmLockConfig moved to separate file |
+| 3.1.0                      | ShmLockConfig moved to separate file and python support added for up to Python 3.7 |
 
 ---
 <a name="todos"></a>
