@@ -9,7 +9,7 @@ description = "This module provides an inter-process lock implementation, elimin
 long_description = "file: README.md"
 long_description_content_type = "text/markdown"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.7"
 authors = [
     { name = "Fabian Krumm", email = "ghub_fk@gmx.de" },
 ]
