@@ -18,6 +18,8 @@ class ShmLockConfig(): # pylint: disable=(too-many-instance-attributes)
     """
     data class to store the configuration parameters of the lock
 
+    TODO we could include a type check in this dataclass
+
     Attributes
     ----------
     name : str
