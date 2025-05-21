@@ -25,7 +25,7 @@ class ShmLockConfig(): # pylint: disable=(too-many-instance-attributes)
     poll_interval : float
         time delay in seconds after a failed acquire try after which it will be tried
         again to acquire the lock
-    exit_event : multiprocessing.synchronize.Event
+    exit_event : multiprocessing.synchronize.Event | threading.Event
         if None is provided a new one will be initialized. if event is set to true
         -> acquirement will stop and it will not be possible to acquire a lock until event is
         unset/cleared
