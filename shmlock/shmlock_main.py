@@ -14,7 +14,7 @@ from multiprocessing import shared_memory
 from multiprocessing import Event
 from contextlib import contextmanager
 import logging
-from typing import Union
+from typing import Union, Optional
 
 __all__ = ["ShmLock",
            "remove_shm_from_resource_tracker",
@@ -596,7 +596,7 @@ class ShmLock(ShmModuleBaseLogger):
         """
         return self._config.exit_event
 
-    def debug_get_uuid_of_locking_lock(self) -> Union[str, None]:
+    def debug_get_uuid_of_locking_lock(self) -> Optional[str]:
         """
         get uuid of the locking lock
 
