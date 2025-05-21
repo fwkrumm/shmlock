@@ -10,7 +10,7 @@ import time
 import unittest
 import shmlock
 import shmlock.shmlock_exceptions
-
+import shmlock.shmlock_config
 
 class InitTest(unittest.TestCase):
     """
@@ -45,6 +45,32 @@ class InitTest(unittest.TestCase):
         # shared memory should be deleted thus attaching should fail
         with self.assertRaises(FileNotFoundError):
             shared_memory.SharedMemory(name=shm_name)
+
+    def test_shm_config_init(self):
+        """
+        version basic test for shm config class; check that init
+        values are correctly set
+        """
+        uuid = shmlock.shmlock_uuid.ShmUuid()
+        config = shmlock.shmlock_config.ShmLockConfig(
+            name="test",
+            poll_interval=1.0,
+            exit_event=None,
+            track=True,
+            timeout=1.0,
+            uuid=uuid,
+            pid=1,
+            description="description"
+        )
+        self.assertEqual(config.name, "test")
+        self.assertEqual(config.poll_interval, 1.0)
+        self.assertEqual(config.exit_event, None)
+        self.assertEqual(config.track, True)
+        self.assertEqual(config.timeout, 1.0)
+        self.assertEqual(config.uuid, uuid)
+        self.assertEqual(config.pid, 1)
+        self.assertEqual(config.description, "description")
+
 
     def test_wrong_parameter_types(self):
         """
