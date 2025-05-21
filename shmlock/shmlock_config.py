@@ -1,8 +1,5 @@
 """
-main class of shared memory lock.
-
-If possible never terminate this process using ctrl+c or similar. This can lead to dangling
-shared memory blocks. Best practice is to use the exit event to stop the lock from acquirement.
+config dataclass for the shared memory lock
 """
 
 import multiprocessing
