@@ -43,7 +43,7 @@ class ShmLockConfig(): # pylint: disable=(too-many-instance-attributes)
         custom description of the lock which can be set as property setter, by default ""
     """
     name: str
-    poll_interval: float
+    poll_interval: Union[float, int]
     exit_event: Union[multiprocessing.synchronize.Event, threading.Event]
     track: bool
     timeout: float
