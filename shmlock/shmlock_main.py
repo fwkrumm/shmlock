@@ -596,7 +596,7 @@ class ShmLock(ShmModuleBaseLogger):
         """
         return self._config.exit_event
 
-    def debug_get_uuid_of_locking_lock(self) -> Union[str , None]:
+    def debug_get_uuid_of_locking_lock(self) -> Union[str, None]:
         """
         get uuid of the locking lock
 
