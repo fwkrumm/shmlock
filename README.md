@@ -190,10 +190,10 @@ finally:
         shm.buf[0] -= 1
         ref_count = shm.buf[0]
         print("ref count decremented to", ref_count)
-    shm.close()
-    if ref_count == 0:
-        shm.unlink()
-        print("shared memory unlinked since last reference released")
+		shm.close()
+		if ref_count == 0:
+			shm.unlink()
+			print("shared memory unlinked since last reference released")
 
 # the lock does not require any additional release as long as the process did not terminate abruptly.
 
@@ -386,6 +386,7 @@ However, please note that in some situations, you might not be able to recover f
 | 3.0.1                      | Minor adjustments in README.md and some workflow files |
 | 3.0.2                      | Added example code to README.md |
 | 3.1.0                      | ShmLockConfig moved to separate file and added support down to Python 3.8 (Union from typing) |
+| 3.1.1                      | Minor fix to real-world example in README.md |
 
 ---
 <a name="todos"></a>
