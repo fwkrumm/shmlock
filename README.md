@@ -160,16 +160,16 @@ import uuid
 
 lock = shmlock.ShmLock("lock_name ")
 
-# create (attach to) shared memory for synchronized access
-try:
-    shm = shared_memory.SharedMemory(name="shm_name", create=True, size=17) # buffer layout: 1 byte for the reference counter (to track usage), followed by 16 bytes for the UUID (a 128-bit unique identifier).
-except FileExistsError:
-    shm = shared_memory.SharedMemory(name="shm_name")
-
 with lock:
-    # increment ref counter (synchronized with lock)
-    shm.buf[0] += 1
-    print("ref count incremented to", shm.buf[0])
+	# create (attach to) shared memory for synchronized access
+	try:
+		shm = shared_memory.SharedMemory(name="shm_name", create=True, size=17) # buffer layout: 1 byte for the reference counter (to track usage), followed by 16 bytes for the UUID (a 128-bit unique identifier).
+	except FileExistsError:
+		shm = shared_memory.SharedMemory(name="shm_name")
+
+	# increment ref counter (synchronized with lock)
+	shm.buf[0] += 1
+	print("ref count incremented to", shm.buf[0])
 
 try:
 
