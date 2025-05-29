@@ -8,6 +8,7 @@ import os
 import time
 import sys
 import threading
+import warnings
 import multiprocessing
 import multiprocessing.synchronize
 from multiprocessing import shared_memory
@@ -256,12 +257,10 @@ class ShmLock(ShmModuleBaseLogger):
                 # dangling shared memory block. This is only the case if the process is
                 # interrupted somewhere within the shared memory creation process within the
                 # multiprocessing library.
-                self.warning("KeyboardInterrupt: process interrupted while trying to "\
-                             "acquire lock %s. This might lead to leaking resources. "\
-                             "shared memory variable is %s",
-                             self,
-                             getattr(self._shm, "shm", None))
-
+                warnings.warn("KeyboardInterrupt: process interrupted while trying to "\
+                              f"acquire lock {self}. This might lead to leaking resources. "\
+                              f"shared memory variable is {getattr(self._shm, "shm", None)}",
+                              stacklevel=2)
 
                 # raise keyboardinterrupt to stop the process; release() will clean up.
                 raise KeyboardInterrupt("ctrl+c") from err
