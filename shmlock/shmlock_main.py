@@ -62,7 +62,7 @@ class ShmLock(ShmModuleBaseLogger):
         logger : logging.Logger, optional
             a logger, this class only logs at debug level which process tried to acquire,
             which succeeded etc., by default None
-        exit_event : multiprocessing.synchronize.Event, optional
+        exit_event : multiprocessing.synchronize.Event | threading.Event, optional
             if None is provided a new one will be initialized. if event is set to true
             -> acquirement will stop and it will not be possible to acquire a lock until event is
             unset/cleared. Set explicitly to False if you do NOT want to have an exit event,
