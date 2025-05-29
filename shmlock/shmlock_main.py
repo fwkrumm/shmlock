@@ -268,8 +268,8 @@ class ShmLock(ShmModuleBaseLogger):
                 # multiprocessing library.
                 warnings.warn("KeyboardInterrupt: process interrupted while trying to "\
                               f"acquire lock {self}. This might lead to leaking resources. "\
-                              f"""shared memory variable is {getattr(self._shm, "shm", None)}""" \
-                              "try to use the query_for_error_after_interrupt() function to " \
+                              f"""shared memory variable is {getattr(self._shm, "shm", None)}. """ \
+                              "Try to use the query_for_error_after_interrupt() function to " \
                               "check shared memory integrity. Make sure other processes "\
                               "are still able to acquire the lock.",
                               ShmLockDanglingSharedMemoryWarning)
