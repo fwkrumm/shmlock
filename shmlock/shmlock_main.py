@@ -35,6 +35,8 @@ LOCK_SHM_SIZE = 16 # size of the shared memory block in bytes to store uuid
 class ShmLockDanglingSharedMemoryWarning(ResourceWarning):
     pass
 warnings.simplefilter("always", ShmLockDanglingSharedMemoryWarning)
+
+
 class ShmLock(ShmModuleBaseLogger):
 
     """
