@@ -32,7 +32,9 @@ from shmlock.shmlock_config import ShmLockConfig
 LOCK_SHM_SIZE = 16 # size of the shared memory block in bytes to store uuid
 
 # for warning if shared memory block might be dangling due to KeyboardInterrupt
-warnings.simplefilter("always", ResourceWarning)
+class ShmLockDanglingSharedMemoryWarning(ResourceWarning):
+    pass
+warnings.simplefilter("always", ShmLockDanglingSharedMemoryWarning)
 class ShmLock(ShmModuleBaseLogger):
 
     """
@@ -268,7 +270,7 @@ class ShmLock(ShmModuleBaseLogger):
                               "try to use the query_for_error_after_interrupt() function to " \
                               "check shared memory integrity. Make sure other processes "\
                               "are still able to acquire the lock.",
-                              ResourceWarning)
+                              ShmLockDanglingSharedMemoryWarning)
 
                 # raise keyboardinterrupt to stop the process; release() will clean up.
                 raise KeyboardInterrupt("ctrl+c") from err
