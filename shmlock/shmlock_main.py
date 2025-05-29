@@ -37,6 +37,9 @@ class ShmLock(ShmModuleBaseLogger):
 
     """
     lock class using shared memory to synchronize shared resources access
+
+    NOTE that the lock is reentrant, i.e. the same lock object can be acquired multiple times
+    by the same thread.
     """
 
     def __init__(self,
