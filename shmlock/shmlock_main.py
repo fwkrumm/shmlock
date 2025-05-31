@@ -8,6 +8,7 @@ import os
 import time
 import sys
 import threading
+import warnings
 import multiprocessing
 import multiprocessing.synchronize
 from multiprocessing import shared_memory
@@ -27,13 +28,18 @@ from shmlock.shmlock_monkey_patch import remove_shm_from_resource_tracker
 from shmlock.shmlock_base_logger import ShmModuleBaseLogger
 from shmlock.shmlock_uuid import ShmUuid
 from shmlock.shmlock_config import ShmLockConfig
+from shmlock.shmlock_warnings import ShmLockDanglingSharedMemoryWarning
 
 LOCK_SHM_SIZE = 16 # size of the shared memory block in bytes to store uuid
+
 
 class ShmLock(ShmModuleBaseLogger):
 
     """
     lock class using shared memory to synchronize shared resources access
+
+    NOTE that the lock is reentrant, i.e. the same lock object can be acquired multiple times
+    by the same thread.
     """
 
     def __init__(self,
@@ -56,7 +62,7 @@ class ShmLock(ShmModuleBaseLogger):
         logger : logging.Logger, optional
             a logger, this class only logs at debug level which process tried to acquire,
             which succeeded etc., by default None
-        exit_event : multiprocessing.synchronize.Event, optional
+        exit_event : multiprocessing.synchronize.Event | threading.Event, optional
             if None is provided a new one will be initialized. if event is set to true
             -> acquirement will stop and it will not be possible to acquire a lock until event is
             unset/cleared. Set explicitly to False if you do NOT want to have an exit event,
@@ -256,12 +262,13 @@ class ShmLock(ShmModuleBaseLogger):
                 # dangling shared memory block. This is only the case if the process is
                 # interrupted somewhere within the shared memory creation process within the
                 # multiprocessing library.
-                self.warning("KeyboardInterrupt: process interrupted while trying to "\
-                             "acquire lock %s. This might lead to leaking resources. "\
-                             "shared memory variable is %s",
-                             self,
-                             getattr(self._shm, "shm", None))
-
+                warnings.warn("KeyboardInterrupt: process interrupted while trying to "\
+                              f"acquire lock {self}. This might lead to leaking resources. "\
+                              f"""shared memory variable is {getattr(self._shm, "shm", None)}. """ \
+                              "Try to use the query_for_error_after_interrupt() function to " \
+                              "check shared memory integrity. Make sure other processes "\
+                              "are still able to acquire the lock.",
+                              ShmLockDanglingSharedMemoryWarning)
 
                 # raise keyboardinterrupt to stop the process; release() will clean up.
                 raise KeyboardInterrupt("ctrl+c") from err
