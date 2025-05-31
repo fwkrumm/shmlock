@@ -28,13 +28,9 @@ from shmlock.shmlock_monkey_patch import remove_shm_from_resource_tracker
 from shmlock.shmlock_base_logger import ShmModuleBaseLogger
 from shmlock.shmlock_uuid import ShmUuid
 from shmlock.shmlock_config import ShmLockConfig
+from shmlock.shmlock_warnings import ShmLockDanglingSharedMemoryWarning
 
 LOCK_SHM_SIZE = 16 # size of the shared memory block in bytes to store uuid
-
-# for warning if shared memory block might be dangling due to KeyboardInterrupt
-class ShmLockDanglingSharedMemoryWarning(ResourceWarning):
-    pass
-warnings.simplefilter("always", ShmLockDanglingSharedMemoryWarning)
 
 
 class ShmLock(ShmModuleBaseLogger):
