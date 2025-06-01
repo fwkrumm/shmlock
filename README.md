@@ -306,6 +306,7 @@ This file is very similar to `run_perf.py`; however, it focuses solely on `shmlo
 
 
 ---
+<a name="troubleshooting-and-known-issues"></a>
 <a id="troubleshooting-and-known-issues"></a>
 ## Troubleshooting and Known Issues
 
@@ -375,6 +376,7 @@ However, please note that in some situations, you might not be able to recover f
 
 ---
 <a name="version-history"></a>
+<a id="version-history"></a>
 ## Version History
 
 | Version / Git Tag on Master | Description |
@@ -388,6 +390,7 @@ However, please note that in some situations, you might not be able to recover f
 | 3.1.0                      | ShmLockConfig moved to separate file and added support down to Python 3.8 (Union from typing) |
 | 3.1.1                      | Minor fix to real-world example in README.md |
 | 3.1.2                      | Use warnings.warn for potential dangling shared memory block |
+| 3.1.3                      | Fix anchors in readme and remove unnecessary space |
 
 ---
 <a name="todos"></a>

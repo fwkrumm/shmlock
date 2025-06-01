@@ -23,7 +23,7 @@ __all__ = ["ShmLock",
            ]
 
 # reveal functions for resource tracking adjustments
-import  shmlock.shmlock_exceptions as exceptions
+import shmlock.shmlock_exceptions as exceptions
 from shmlock.shmlock_monkey_patch import remove_shm_from_resource_tracker
 from shmlock.shmlock_base_logger import ShmModuleBaseLogger
 from shmlock.shmlock_uuid import ShmUuid
