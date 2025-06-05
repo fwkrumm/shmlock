@@ -238,42 +238,50 @@ class ShmLock(ShmModuleBaseLogger):
                                                  "Do not shared locks among processes!")
 
         start_time = time.perf_counter()
-        while (not self._config.exit_event.is_set()) and \
-            (not timeout or time.perf_counter() - start_time < timeout):
-            # enter loop if exit event is not set and either no timeout is set (0/False) or
-            # the passed time of trying to acquire the lock is smaller than the timeout
-            # None means infinite wait
-            try:
-                return self._create_or_fail() # returns True or raises exception
-            except FileExistsError:
-                # shared memory block already exists, i.e. the lock is already acquired
-                self.debug("could not acquire lock %s; "\
-                         "timeout[s] is %s",
-                         self,
-                         timeout)
-                if timeout is False:
-                    # if timeout is explicitly False
-                    #   -> break loop and return False since acquirement failed
-                    break
-                self._config.exit_event.wait(self._config.poll_interval)
-                continue
-            except KeyboardInterrupt as err:
-                # special treatment for keyboard interrupt since this might lead to a
-                # dangling shared memory block. This is only the case if the process is
-                # interrupted somewhere within the shared memory creation process within the
-                # multiprocessing library.
-                warnings.warn("KeyboardInterrupt: process interrupted while trying to "\
-                              f"acquire lock {self}. This might lead to leaking resources. "\
-                              f"""shared memory variable is {getattr(self._shm, "shm", None)}. """ \
-                              "Try to use the query_for_error_after_interrupt() function to " \
-                              "check shared memory integrity. Make sure other processes "\
-                              "are still able to acquire the lock.",
-                              ShmLockDanglingSharedMemoryWarning)
+        try:
+            while (not self._config.exit_event.is_set()) and \
+                (not timeout or time.perf_counter() - start_time < timeout):
+                # enter loop if exit event is not set and either no timeout is set (0/False) or
+                # the passed time of trying to acquire the lock is smaller than the timeout
+                # None means infinite wait
+                try:
+                    return self._create_or_fail() # returns True or raises exception
+                except FileExistsError:
+                    # shared memory block already exists, i.e. the lock is already acquired
+                    self.debug("could not acquire lock %s; "\
+                            "timeout[s] is %s",
+                            self,
+                            timeout)
+                    if timeout is False:
+                        # if timeout is explicitly False
+                        #   -> break loop and return False since acquirement failed
+                        break
+                    self._config.exit_event.wait(self._config.poll_interval)
+                    continue
+                except KeyboardInterrupt as err:
+                    # special treatment for keyboard interrupt since this might lead to a
+                    # dangling shared memory block. This is only the case if the process is
+                    # interrupted somewhere within the shared memory creation process within the
+                    # multiprocessing library.
+                    warnings.warn("KeyboardInterrupt: process interrupted while trying to "\
+                                f"acquire lock {self}. This might lead to leaking resources. "\
+                                f"""shared memory variable is {getattr(self._shm, "shm", None)}. """ \
+                                "Try to use the query_for_error_after_interrupt() function to " \
+                                "check shared memory integrity. Make sure other processes "\
+                                "are still able to acquire the lock.",
+                                ShmLockDanglingSharedMemoryWarning)
 
-                # raise keyboardinterrupt to stop the process; release() will clean up.
-                raise KeyboardInterrupt("ctrl+c") from err
-        # could not acquire within timeout or exit event is set
-        return False
+                    # raise keyboardinterrupt to stop the process; release() will clean up.
+                    raise KeyboardInterrupt("ctrl+c") from err
+            # could not acquire within timeout or exit event is set
+            return False
+        except OSError as err:
+            # on windows this might happen at program termination e.g. unittests
+            msg = f"During acquiring lock {self} the exit event handle got invalid (main "\
+                   "process terminated?). Make sure exit event does not become invalid."
+            self.error(msg)
+            self.release() # make sure lock is released
+            raise OSError(msg) from err
 
     def _create_or_fail(self):
         """
