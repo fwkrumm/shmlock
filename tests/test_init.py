@@ -33,7 +33,8 @@ class InitTest(unittest.TestCase):
         check if init works with default values
         """
         shm_name = str(time.time())
-        obj = shmlock.ShmLock(shm_name, poll_interval=1)
+        event = multiprocessing.Event()
+        obj = shmlock.ShmLock(shm_name, poll_interval=1, exit_event=event)
         self.assertEqual(obj.name, shm_name)
         self.assertEqual(obj.poll_interval, 1)
         # internally should be a float

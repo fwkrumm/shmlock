@@ -33,6 +33,32 @@ from shmlock.shmlock_warnings import ShmLockDanglingSharedMemoryWarning
 LOCK_SHM_SIZE = 16 # size of the shared memory block in bytes to store uuid
 
 
+class ExitEventMock():
+    """
+    mock class for exit event if not desired by user. Note that this is not thread-safe or
+    process-safe and should only be used if the user does not want so use any threading or
+    multiprocessing events as exit event.
+    """
+
+    def __init__(self):
+        self._set = False
+
+    def is_set(self) -> bool:
+        return self._set
+
+    def set(self):
+        self._set = True
+
+    def clear(self):
+        self._set = False
+
+    def wait(self, timeout: float):
+        """
+        mock wait function to resemble multiprocessing.Event.wait()
+        """
+        time.sleep(timeout)
+
+
 class ShmLock(ShmModuleBaseLogger):
 
     """
@@ -82,8 +108,10 @@ class ShmLock(ShmModuleBaseLogger):
         if not isinstance(lock_name, str):
             raise exceptions.ShmLockValueError("lock_name must be a string")
         if exit_event and \
-            not isinstance(exit_event, multiprocessing.synchronize.Event):
-            raise exceptions.ShmLockValueError("exit_event must be a multiprocessing.Event")
+            not (isinstance(exit_event, multiprocessing.synchronize.Event) or \
+                 isinstance(exit_event, threading.Event)):
+            raise exceptions.ShmLockValueError("exit_event must be a multiprocessing.Event "\
+                                               "or thrading.Event")
 
         if not lock_name:
             raise exceptions.ShmLockValueError("lock_name must not be empty")
@@ -92,7 +120,8 @@ class ShmLock(ShmModuleBaseLogger):
         self._config = ShmLockConfig(name=lock_name,
                                      poll_interval=float(poll_interval),
                                      timeout=None, # for __call__
-                                     exit_event=exit_event if exit_event is not None else Event(),
+                                     exit_event=exit_event if exit_event is not None else\
+                                          ExitEventMock(),
                                      track=None,
                                      uuid=ShmUuid(),
                                      pid = os.getpid())
@@ -277,9 +306,9 @@ class ShmLock(ShmModuleBaseLogger):
             # could not acquire within timeout or exit event is set
             return False
         except OSError as err:
-            # on windows this might happen at program termination e.g. unittests
+            # on windows this might happen at program termination e.g. if an unittest fails
             msg = f"During acquiring lock {self} the exit event handle got invalid (main "\
-                   "process terminated?). Make sure exit event does not become invalid."
+                   "process terminated?). Make sure the exit event does not become invalid."
             self.error(msg)
             self.release() # make sure lock is released
             raise OSError(msg) from err
