@@ -391,7 +391,7 @@ However, please note that in some situations, you might not be able to recover f
 | 3.1.1                      | Minor fix to real-world example in README.md |
 | 3.1.2                      | Use warnings.warn for potential dangling shared memory block |
 | 3.1.3                      | Fix anchors in readme and remove unnecessary space |
-| 3.1.4                      | Handle OSError if event handle gets invalid on Windows |
+| 4.0.0                      | Handle OSError if event handle gets invalid on Windows. Remove automatic initialization of multiprocessing Event, if user did not specify Event a mock event will be used which uses simply a time.sleep for timeout operations |
 
 ---
 <a name="todos"></a>

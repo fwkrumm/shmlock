@@ -33,14 +33,13 @@ class InitTest(unittest.TestCase):
         check if init works with default values
         """
         shm_name = str(time.time())
-        event = multiprocessing.Event()
-        obj = shmlock.ShmLock(shm_name, poll_interval=1, exit_event=event)
+        obj = shmlock.ShmLock(shm_name, poll_interval=1)
         self.assertEqual(obj.name, shm_name)
         self.assertEqual(obj.poll_interval, 1)
         # internally should be a float
         self.assertTrue(isinstance(obj.poll_interval, float))
         # exit event should be automatically assigned
-        self.assertTrue(isinstance(obj.get_exit_event(), multiprocessing.synchronize.Event))
+        self.assertTrue(isinstance(obj.get_exit_event(), shmlock.shmlock_config.ExitEventMock))
 
         del obj
         # shared memory should be deleted thus attaching should fail

@@ -1,7 +1,7 @@
 """
 config dataclass for the shared memory lock
 """
-
+import time
 import multiprocessing
 import multiprocessing.synchronize
 import threading
@@ -9,6 +9,51 @@ from dataclasses import dataclass
 from typing import Union
 
 from shmlock.shmlock_uuid import ShmUuid
+
+
+class ExitEventMock():
+    """
+    mock class for exit event if not desired by user. Note that this is not thread-safe or
+    process-safe and should only be used if the user does not want so use any threading or
+    multiprocessing events as exit event.
+    """
+
+    def __init__(self):
+        """
+        initialize the mock exit event
+        """
+        self._set = False
+
+    def is_set(self) -> bool:
+        """
+        mock is_set function to resemble Event.is_set()
+        This function returns True if the exit event is set, otherwise False.
+
+        Returns
+        -------
+        bool
+            True if the exit event is set, otherwise False.
+        """
+        return self._set
+
+    def set(self):
+        """
+        mock set function to resemble Event.set()
+        """
+        self._set = True
+
+    def clear(self):
+        """
+        mock clear function to resemble Event.clear()
+        """
+        self._set = False
+
+    def wait(self, timeout: float):
+        """
+        mock wait function to resemble multiprocessing.Event.wait()
+        """
+        time.sleep(timeout)
+
 
 @dataclass
 class ShmLockConfig(): # pylint: disable=(too-many-instance-attributes)
@@ -41,7 +86,7 @@ class ShmLockConfig(): # pylint: disable=(too-many-instance-attributes)
     """
     name: str
     poll_interval: Union[float, int]
-    exit_event: Union[multiprocessing.synchronize.Event, threading.Event]
+    exit_event: Union[multiprocessing.synchronize.Event, threading.Event, ExitEventMock]
     track: bool
     timeout: float
     uuid: ShmUuid

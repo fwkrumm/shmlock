@@ -12,7 +12,6 @@ import warnings
 import multiprocessing
 import multiprocessing.synchronize
 from multiprocessing import shared_memory
-from multiprocessing import Event
 from contextlib import contextmanager
 import logging
 from typing import Union, Optional
@@ -27,36 +26,10 @@ import shmlock.shmlock_exceptions as exceptions
 from shmlock.shmlock_monkey_patch import remove_shm_from_resource_tracker
 from shmlock.shmlock_base_logger import ShmModuleBaseLogger
 from shmlock.shmlock_uuid import ShmUuid
-from shmlock.shmlock_config import ShmLockConfig
+from shmlock.shmlock_config import ShmLockConfig, ExitEventMock
 from shmlock.shmlock_warnings import ShmLockDanglingSharedMemoryWarning
 
 LOCK_SHM_SIZE = 16 # size of the shared memory block in bytes to store uuid
-
-
-class ExitEventMock():
-    """
-    mock class for exit event if not desired by user. Note that this is not thread-safe or
-    process-safe and should only be used if the user does not want so use any threading or
-    multiprocessing events as exit event.
-    """
-
-    def __init__(self):
-        self._set = False
-
-    def is_set(self) -> bool:
-        return self._set
-
-    def set(self):
-        self._set = True
-
-    def clear(self):
-        self._set = False
-
-    def wait(self, timeout: float):
-        """
-        mock wait function to resemble multiprocessing.Event.wait()
-        """
-        time.sleep(timeout)
 
 
 class ShmLock(ShmModuleBaseLogger):
@@ -108,8 +81,7 @@ class ShmLock(ShmModuleBaseLogger):
         if not isinstance(lock_name, str):
             raise exceptions.ShmLockValueError("lock_name must be a string")
         if exit_event and \
-            not (isinstance(exit_event, multiprocessing.synchronize.Event) or \
-                 isinstance(exit_event, threading.Event)):
+            not isinstance(exit_event, (multiprocessing.synchronize.Event, threading.Event)):
             raise exceptions.ShmLockValueError("exit_event must be a multiprocessing.Event "\
                                                "or thrading.Event")
 
