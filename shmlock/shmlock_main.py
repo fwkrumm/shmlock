@@ -599,7 +599,9 @@ class ShmLock(ShmModuleBaseLogger):
         """
         self._config.description = description
 
-    def get_exit_event(self) -> Union[multiprocessing.synchronize.Event, threading.Event]:
+    def get_exit_event(self) -> Union[multiprocessing.synchronize.Event,
+                                      threading.Event,
+                                      ExitEventMock]:
         """
         get exit event; if lock should be stopped/prevent from further acquirements, set this
         event.
@@ -608,8 +610,8 @@ class ShmLock(ShmModuleBaseLogger):
 
         Returns
         -------
-        multiprocessing.synchronize.Event
-            set this to stop the lock acquirement
+        multiprocessing.synchronize.Event, threading.Event, ExitEventMock
+            set this to stop i.e. prevent the lock acquirement
         """
         return self._config.exit_event
 

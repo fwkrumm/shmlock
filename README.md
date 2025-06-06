@@ -116,7 +116,7 @@ with lock(timeout=1) as success:
         # your code
         pass
     else:
-        # sadness i.e. lock could not be acquired after specified timeout
+        # lock could not be acquired after specified timeout
         pass
 
 
@@ -124,6 +124,8 @@ with lock(timeout=1) as success:
 lock.description = "main process lock"
 
 # get exit event and set it in the main process to stop all locks from acquiring
+# NOTE that if no event has been specified during the init, this will be a mocked event
+# i.e. there will not be automatic creations of threading.Event or multiprocessing.Event objects
 lock.get_exit_event()
 
 # get uuid of lock which has currently acquired shared memory
