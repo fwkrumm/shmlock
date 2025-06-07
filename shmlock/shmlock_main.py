@@ -62,10 +62,9 @@ class ShmLock(ShmModuleBaseLogger):
             a logger, this class only logs at debug level which process tried to acquire,
             which succeeded etc., by default None
         exit_event : multiprocessing.synchronize.Event | threading.Event, optional
-            if None is provided a new one will be initialized. if event is set to true
-            -> acquirement will stop and it will not be possible to acquire a lock until event is
-            unset/cleared. Set explicitly to False if you do NOT want to have an exit event,
-            by default None
+            if None is provided a simple sleep will be used. if the exit event is set, the
+            acquirement will stop and it will not be possible to acquire a lock until event is
+            unset/cleared, by default None
         track : bool, optional
             set to False if you do want the shared memory block been tracked.
             This is parameter only supported for python >= 3.13 in SharedMemory
