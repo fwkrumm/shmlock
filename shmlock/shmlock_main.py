@@ -622,10 +622,10 @@ class ShmLock(ShmModuleBaseLogger):
         time.sleep()
         """
         if isinstance(self._config.exit_event, ExitEventMock):
-            self.debug("mock exit event already set for lock %s", self)
+            self.debug("mocked exit event already set for lock %s", self)
             return
         self._config.exit_event = ExitEventMock()
-        self.debug("using mock exit event for lock %s", self)
+        self.debug("using mocked exit event for lock %s", self)
 
     def debug_get_uuid_of_locking_lock(self) -> Optional[str]:
         """
