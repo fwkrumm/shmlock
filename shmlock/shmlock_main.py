@@ -278,7 +278,10 @@ class ShmLock(ShmModuleBaseLogger):
         except OSError as err:
             # on windows this might happen at program termination e.g. if an unittest fails
             msg = f"During acquiring lock {self} the exit event handle got invalid (main "\
-                   "process terminated?). Make sure the exit event does not become invalid."
+                   "process terminated?). Make sure the exit event does not become invalid. "\
+                   "Alternatively use use_mock_exit_event() function which repleaces the exit "\
+                   "event with a mock event which simply uses time.sleep() and has no handle "\
+                   "which might become invalid. ",
             self.error(msg)
             self.release() # make sure lock is released
             raise OSError(msg) from err
