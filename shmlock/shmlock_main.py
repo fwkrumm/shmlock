@@ -613,6 +613,20 @@ class ShmLock(ShmModuleBaseLogger):
         """
         return self._config.exit_event
 
+    def use_mock_exit_event(self):
+        """
+        use mock exit event which replaces the multiprocessing or threading event.
+        This is useful for lock calls within __del__ methods since (at least on Windows) within
+        interative sessions the exit event might be invalid at garbace collection time.
+        In this case it might be useful to use this mock exit event which simply uses a
+        time.sleep()
+        """
+        if isinstance(self._config.exit_event, ExitEventMock):
+            self.debug("mock exit event already set for lock %s", self)
+            return
+        self._config.exit_event = ExitEventMock()
+        self.debug("using mock exit event for lock %s", self)
+
     def debug_get_uuid_of_locking_lock(self) -> Optional[str]:
         """
         get uuid of the locking lock

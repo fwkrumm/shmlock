@@ -1,6 +1,8 @@
 """
 init tests of shmlock package
 """
+import multiprocessing
+import threading
 from multiprocessing import shared_memory
 import sys
 import time
@@ -30,18 +32,30 @@ class InitTest(unittest.TestCase):
         check if init works with default values
         """
         shm_name = str(time.time())
-        obj = shmlock.ShmLock(shm_name, poll_interval=1)
-        self.assertEqual(obj.name, shm_name)
-        self.assertEqual(obj.poll_interval, 1)
+        lock = shmlock.ShmLock(shm_name, poll_interval=1)
+        self.assertEqual(lock.name, shm_name)
+        self.assertEqual(lock.poll_interval, 1)
         # internally should be a float
-        self.assertTrue(isinstance(obj.poll_interval, float))
+        self.assertTrue(isinstance(lock.poll_interval, float))
         # exit event should be automatically assigned
-        self.assertTrue(isinstance(obj.get_exit_event(), shmlock.shmlock_config.ExitEventMock))
+        self.assertTrue(isinstance(lock.get_exit_event(), shmlock.shmlock_config.ExitEventMock))
 
-        del obj
+        del lock
         # shared memory should be deleted thus attaching should fail
         with self.assertRaises(FileNotFoundError):
             shared_memory.SharedMemory(name=shm_name)
+
+    def test_event_types(self):
+        """
+        test if event types are correctly set
+        """
+        shm_name = str(time.time())
+
+        for event in (multiprocessing.Event(), threading.Event(),):
+            lock = shmlock.ShmLock(shm_name, exit_event=event)
+            self.assertTrue(isinstance(lock.get_exit_event(), type(event)))
+            lock.use_mock_exit_event()
+            self.assertTrue(isinstance(lock.get_exit_event(), shmlock.shmlock_config.ExitEventMock))
 
     def test_shm_config_init(self):
         """
