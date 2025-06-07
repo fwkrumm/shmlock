@@ -48,19 +48,17 @@ class ExitEventMock():
         """
         self._set = False
 
-    def wait(self, timeout: float):
+    def wait(self, sleep_time: float):
         """
         mock wait function to resemble Event(). Note however that this does not react on
-        .set() or .clear() calls and will simply sleep for the given timeout.
+        .set() or .clear() calls and will simply sleep for the given sleep time.
 
         Parameters
         ----------
-        timeout : float
-            time in seconds to wait until the function returns. If the timeout is 0, it will
-            return immediately. If the timeout is negative, it will wait indefinitely.
-            If the exit event is set, it will return immediately.
+        sleep_time : float
+            time in seconds to wait until the function returns.
         """
-        time.sleep(timeout)
+        time.sleep(sleep_time)
         # we do not need a return Value
 
 
