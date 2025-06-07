@@ -15,7 +15,7 @@ class ExitEventMock():
     """
     mock class for exit event if not desired by user. Note that this is not thread-safe or
     process-safe and should only be used if the user does not want so use any threading or
-    multiprocessing events as exit event.
+    multiprocessing events as exit event. The wait will simply be a sleep for given timeout.
     """
 
     def __init__(self):
@@ -50,9 +50,18 @@ class ExitEventMock():
 
     def wait(self, timeout: float):
         """
-        mock wait function to resemble multiprocessing.Event.wait()
+        mock wait function to resemble Event(). Note however that this does not react on
+        .set() or .clear() calls and will simply sleep for the given timeout.
+
+        Parameters
+        ----------
+        timeout : float
+            time in seconds to wait until the function returns. If the timeout is 0, it will
+            return immediately. If the timeout is negative, it will wait indefinitely.
+            If the exit event is set, it will return immediately.
         """
         time.sleep(timeout)
+        # we do not need a return Value
 
 
 @dataclass

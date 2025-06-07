@@ -75,8 +75,7 @@ class ShmLock(ShmModuleBaseLogger):
         super().__init__(logger=logger)
 
         # type checks
-        if (not isinstance(poll_interval, float) and \
-            not isinstance(poll_interval, int)) or poll_interval <= 0:
+        if (not isinstance(poll_interval, (float, int,))) or poll_interval <= 0:
             raise exceptions.ShmLockValueError("poll_interval must be a float or int and > 0")
         if not isinstance(lock_name, str):
             raise exceptions.ShmLockValueError("lock_name must be a string")
