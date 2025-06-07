@@ -281,7 +281,7 @@ class ShmLock(ShmModuleBaseLogger):
                    "process terminated?). Make sure the exit event does not become invalid. "\
                    "Alternatively use use_mock_exit_event() function which repleaces the exit "\
                    "event with a mock event which simply uses time.sleep() and has no handle "\
-                   "which might become invalid. ",
+                   "which might become invalid."
             self.error(msg)
             self.release() # make sure lock is released
             raise OSError(msg) from err
