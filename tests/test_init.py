@@ -45,6 +45,25 @@ class InitTest(unittest.TestCase):
         with self.assertRaises(FileNotFoundError):
             shared_memory.SharedMemory(name=shm_name)
 
+    def test_init_methods(self):
+        """
+        check that locked and acquired properties work correctly
+        """
+        shm_name = str(time.time())
+        lock = shmlock.ShmLock(shm_name, poll_interval=1)
+        self.assertFalse(lock.locked)
+        self.assertFalse(lock.acquired)
+
+        # acquire the lock
+        self.assertTrue(lock.acquire(timeout=1))
+        self.assertTrue(lock.locked)
+        self.assertTrue(lock.acquired)
+
+        # release the lock
+        lock.release()
+        self.assertFalse(lock.locked)
+        self.assertFalse(lock.acquired)
+
     def test_event_types(self):
         """
         test if event types are correctly set
