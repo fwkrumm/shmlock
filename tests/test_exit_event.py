@@ -36,7 +36,7 @@ class ExitEventTest(unittest.TestCase):
         set up class method
         """
         obj = shmlock.ShmLock(LOCK_NAME)
-        cls.assertTrue(obj.acquire(timeout=1), "lock could not be acquired initially i.e. "\
+        cls().assertTrue(obj.acquire(timeout=1), "lock could not be acquired initially i.e. "\
             "it is locked by another process. Tests cannot run.")
 
     # @unittest.skip("skip for now")

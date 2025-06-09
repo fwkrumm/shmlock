@@ -170,7 +170,7 @@ class FunctionalTest(unittest.TestCase):
         set up class method
         """
         obj = shmlock.ShmLock(LOCK_NAME)
-        cls.assertTrue(obj.acquire(timeout=1), "lock could not be acquired initially i.e. "\
+        cls().assertTrue(obj.acquire(timeout=1), "lock could not be acquired initially i.e. "\
             "it is locked by another process. Tests cannot run.")
 
     def tearDown(self):
@@ -186,10 +186,10 @@ class FunctionalTest(unittest.TestCase):
         """
         tear down class method
         """
-        if cls.result_shm is not None:
-            cls.result_shm.close()
-            cls.result_shm.unlink()
-            cls.result_shm = None
+        if cls().result_shm is not None:
+            cls().result_shm.close()
+            cls().result_shm.unlink()
+            cls().result_shm = None
 
     def setUp(self):
         """
