@@ -58,7 +58,8 @@ class ExitEventMock():
         sleep_time : float
             time in seconds to wait until the function returns.
         """
-        time.sleep(sleep_time)
+        if not self._set:
+            time.sleep(sleep_time)
         # we do not need a return Value
 
 
