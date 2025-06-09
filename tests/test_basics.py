@@ -3,6 +3,7 @@ tests of basics (lock/release) of shmlock package
 """
 from multiprocessing import shared_memory
 import time
+import gc
 import unittest
 import logging
 import shmlock
@@ -37,6 +38,7 @@ class BasicsTest(unittest.TestCase):
 
         # delete the lock
         del lock1
+        gc.collect() # force garbage collection to assure call of the destructor
 
         try:
             # check that the lock can be acquired i.e. that the resource has been released
