@@ -5,7 +5,6 @@ If possible never terminate this process using ctrl+c or similar. This can lead 
 shared memory blocks. Best practice is to use the exit event to stop the lock from acquirement.
 """
 import os
-import weakref
 import time
 import sys
 import threading
