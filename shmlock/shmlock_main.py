@@ -104,7 +104,7 @@ class ShmLock(ShmModuleBaseLogger):
                                  "python >= 3.13")
             self._config.track = bool(track)
 
-        weakref.finalize(self, self.release, force=True)
+        # weakref.finalize(self, self.release, force=True) # not working
 
         self.debug("lock %s initialized.", self)
 
@@ -542,16 +542,24 @@ class ShmLock(ShmModuleBaseLogger):
                     f"Error was {err}") from err
         return False
 
+    def __del__(self):
+        """
+        destructor
+        """
+        try:
+            self.release(force=True)
+        except TypeError:
+            # if shared memory module has already been unloaded
+            pass
+
     @property
     def locked(self) -> bool:
         """
         check if lock is acquired (alternative api)
         """
-        try:
-            return self._shm.shm is not None
-        except AttributeError:
-            # if self._shm.shm is not set, i.e. the lock has never been acquired
-            return False
+        # make sure member exists
+        return getattr(self._shm, "shm", None) is not None
+
 
     @property
     def acquired(self) -> bool:
