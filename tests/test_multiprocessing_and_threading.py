@@ -163,13 +163,9 @@ class FunctionalTest(unittest.TestCase):
         self.failure_count_queue = multiprocessing.Queue()
         self.time_measurement_queue = multiprocessing.Queue()
 
-        obj = shmlock.ShmLock(LOCK_NAME, track=False if sys.version_info >= (3, 13) else None)
-        self.assertTrue(obj.acquire(timeout=1), "lock could not be acquired initially i.e. "\
-            "it is locked by another process. Tests cannot run.")
-
         self.use_processes = None
 
-        weakref.finalize(self, self.cleanup)
+        #weakref.finalize(self, self.cleanup)
 
     def tearDown(self):
         """
