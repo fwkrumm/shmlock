@@ -90,6 +90,14 @@ class BasicsTest(unittest.TestCase):
 
         self.assertFalse(lock.acquired) # lock should be released now
 
+        # test force parameter. NOTE That this should not be used in production code!
+        with lock:
+            with lock:
+                lock.release(force=True)
+            self.assertFalse(lock.acquired) # lock should be released now
+
+        self.assertFalse(lock.acquired) # lock should still be released
+
     def test_lock_release(self):
         """
         test the basics
