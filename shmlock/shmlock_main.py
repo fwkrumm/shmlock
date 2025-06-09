@@ -5,6 +5,7 @@ If possible never terminate this process using ctrl+c or similar. This can lead 
 shared memory blocks. Best practice is to use the exit event to stop the lock from acquirement.
 """
 import os
+import weakref
 import time
 import sys
 import threading
@@ -102,6 +103,8 @@ class ShmLock(ShmModuleBaseLogger):
                 raise ValueError("track parameter has been set but it is only supported for "\
                                  "python >= 3.13")
             self._config.track = bool(track)
+
+        weakref.finalize(self, self.release, force=True)
 
         self.debug("lock %s initialized.", self)
 
@@ -538,12 +541,6 @@ class ShmLock(ShmModuleBaseLogger):
                     f"release lock {self}. This might result in a leaking resource! "\
                     f"Error was {err}") from err
         return False
-
-    def __del__(self):
-        """
-        destructor
-        """
-        self.release(force=True)
 
     @property
     def locked(self) -> bool:
