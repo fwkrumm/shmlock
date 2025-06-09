@@ -375,6 +375,11 @@ signal.signal(signal.SIGTERM, cleanup) # and/or signal.SIGINT for KeyboardInterr
 
 However, please note that in some situations, you might not be able to recover from an interruption. One example on POSIX is when the shared memory mmap has been created at `/dev/shm/` but has not yet been filled—i.e., it has a size of zero—and the process is interrupted. In this case, you can neither create shared memory with that name (`FileExistsError`) nor attach to it (`ValueError`). The previously mentioned `query_for_error_after_interrupt(...)` will report this error; however, you will have to manually delete the mmap file at `/dev/shm/{lock_name}`.
 
+### Using Locks in a Module’s `__del__` Method
+
+Exercise caution when using locks within another module’s `__del__` method, as the `SharedMemory` class from the `shared_memory` file may no longer be available.
+To ensure safe cleanup, consider alternatives such as `atexit`, `signal.signal`, or `weakref.finalize` when a lock is required during teardown.
+
 
 ---
 <a name="version-history"></a>
@@ -394,7 +399,7 @@ However, please note that in some situations, you might not be able to recover f
 | 3.1.2                      | Use warnings.warn for potential dangling shared memory block |
 | 3.1.3                      | Fix anchors in readme and remove unnecessary space |
 | 4.0.0                      | Handle OSError if event handle gets invalid on Windows. Remove automatic initialization of multiprocessing Event, instead use mock event will simply uses a time.sleep |
-| 4.0.1                      | fix properties and use proper test methods |
+| 4.0.1                      | Fix properties not being available before aquirement and use proper test methods |
 
 ---
 <a name="todos"></a>
