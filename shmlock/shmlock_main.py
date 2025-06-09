@@ -79,7 +79,7 @@ class ShmLock(ShmModuleBaseLogger):
         if not isinstance(lock_name, str):
             raise exceptions.ShmLockValueError("lock_name must be a string")
         if exit_event and \
-            not isinstance(exit_event, (multiprocessing.synchronize.Event, threading.Event)):
+            not isinstance(exit_event, (multiprocessing.synchronize.Event, threading.Event,)):
             raise exceptions.ShmLockValueError("exit_event must be a multiprocessing.Event "\
                                                "or thrading.Event")
 
