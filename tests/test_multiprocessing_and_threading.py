@@ -164,6 +164,15 @@ class FunctionalTest(unittest.TestCase):
 
         self.use_processes = None
 
+    @classmethod
+    def setUpClass(cls):
+        """
+        set up class method
+        """
+        obj = shmlock.ShmLock(LOCK_NAME)
+        cls.assertTrue(obj.acquire(timeout=1), "lock could not be acquired initially i.e. "\
+            "it is locked by another process. Tests cannot run.")
+
     def tearDown(self):
         """
         tear down i.e. release shared memory
@@ -172,14 +181,15 @@ class FunctionalTest(unittest.TestCase):
         self.result_shm.unlink()
         self.result_shm = None
 
-    def __del__(self):
+    @classmethod
+    def tearDownClass(cls):
         """
-        destructor
+        tear down class method
         """
-        if self.result_shm is not None:
-            self.result_shm.close()
-            self.result_shm.unlink()
-            self.result_shm = None
+        if cls.result_shm is not None:
+            cls.result_shm.close()
+            cls.result_shm.unlink()
+            cls.result_shm = None
 
     def setUp(self):
         """

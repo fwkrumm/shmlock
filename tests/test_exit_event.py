@@ -30,6 +30,15 @@ class ExitEventTest(unittest.TestCase):
         """
         super().__init__(*args, **kwargs)
 
+    @classmethod
+    def setUpClass(cls):
+        """
+        set up class method
+        """
+        obj = shmlock.ShmLock(LOCK_NAME)
+        cls.assertTrue(obj.acquire(timeout=1), "lock could not be acquired initially i.e. "\
+            "it is locked by another process. Tests cannot run.")
+
     # @unittest.skip("skip for now")
     def test_set_exit_event(self):
         """
