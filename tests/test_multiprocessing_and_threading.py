@@ -169,7 +169,7 @@ class FunctionalTest(unittest.TestCase):
         """
         set up class method
         """
-        obj = shmlock.ShmLock(LOCK_NAME)
+        obj = shmlock.ShmLock(LOCK_NAME, track=False if sys.version_info >= (3, 13) else None)
         cls().assertTrue(obj.acquire(timeout=1), "lock could not be acquired initially i.e. "\
             "it is locked by another process. Tests cannot run.")
 
