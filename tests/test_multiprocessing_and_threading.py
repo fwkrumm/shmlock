@@ -10,7 +10,6 @@ https://github.com/vllm-project/vllm/issues/5468
 https://github.com/vllm-project/vllm/pull/5512
 
 """
-import weakref
 import multiprocessing
 from multiprocessing import shared_memory
 import multiprocessing.synchronize
@@ -165,8 +164,6 @@ class FunctionalTest(unittest.TestCase):
 
         self.use_processes = None
 
-        #weakref.finalize(self, self.cleanup)
-
     def tearDown(self):
         """
         tear down i.e. release shared memory
@@ -175,7 +172,7 @@ class FunctionalTest(unittest.TestCase):
         self.result_shm.unlink()
         self.result_shm = None
 
-    def cleanup(self):
+    def __del__(self):
         """
         destructor
         """

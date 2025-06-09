@@ -103,8 +103,6 @@ class ShmLock(ShmModuleBaseLogger):
                                  "python >= 3.13")
             self._config.track = bool(track)
 
-        # weakref.finalize(self, self.release, force=True) # not working
-
         self.debug("lock %s initialized.", self)
 
     def __repr__(self):
@@ -545,11 +543,7 @@ class ShmLock(ShmModuleBaseLogger):
         """
         destructor
         """
-        try:
-            self.release(force=True)
-        except TypeError:
-            # if shared memory module has already been unloaded
-            pass
+        self.release(force=True)
 
     @property
     def locked(self) -> bool:
