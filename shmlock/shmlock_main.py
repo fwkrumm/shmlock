@@ -94,7 +94,7 @@ class ShmLock(ShmModuleBaseLogger):
                                           ExitEventMock(),
                                      track=None,
                                      uuid=ShmUuid(),
-                                     pid = os.getpid())
+                                     pid=os.getpid())
 
         if track is not None:
             # track parameter not supported for python < 3.13
