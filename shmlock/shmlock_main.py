@@ -12,7 +12,6 @@ import warnings
 import multiprocessing
 import multiprocessing.synchronize
 from multiprocessing import shared_memory
-from multiprocessing import Event
 from contextlib import contextmanager
 import logging
 from typing import Union, Optional
@@ -27,7 +26,7 @@ import shmlock.shmlock_exceptions as exceptions
 from shmlock.shmlock_monkey_patch import remove_shm_from_resource_tracker
 from shmlock.shmlock_base_logger import ShmModuleBaseLogger
 from shmlock.shmlock_uuid import ShmUuid
-from shmlock.shmlock_config import ShmLockConfig
+from shmlock.shmlock_config import ShmLockConfig, ExitEventMock
 from shmlock.shmlock_warnings import ShmLockDanglingSharedMemoryWarning
 
 LOCK_SHM_SIZE = 16 # size of the shared memory block in bytes to store uuid
@@ -63,10 +62,9 @@ class ShmLock(ShmModuleBaseLogger):
             a logger, this class only logs at debug level which process tried to acquire,
             which succeeded etc., by default None
         exit_event : multiprocessing.synchronize.Event | threading.Event, optional
-            if None is provided a new one will be initialized. if event is set to true
-            -> acquirement will stop and it will not be possible to acquire a lock until event is
-            unset/cleared. Set explicitly to False if you do NOT want to have an exit event,
-            by default None
+            if None is provided a simple sleep will be used. if the exit event is set, the
+            acquirement will stop and it will not be possible to acquire a lock until event is
+            unset/cleared, by default None
         track : bool, optional
             set to False if you do want the shared memory block been tracked.
             This is parameter only supported for python >= 3.13 in SharedMemory
@@ -76,14 +74,14 @@ class ShmLock(ShmModuleBaseLogger):
         super().__init__(logger=logger)
 
         # type checks
-        if (not isinstance(poll_interval, float) and \
-            not isinstance(poll_interval, int)) or poll_interval <= 0:
+        if (not isinstance(poll_interval, (float, int,))) or poll_interval <= 0:
             raise exceptions.ShmLockValueError("poll_interval must be a float or int and > 0")
         if not isinstance(lock_name, str):
             raise exceptions.ShmLockValueError("lock_name must be a string")
         if exit_event and \
-            not isinstance(exit_event, multiprocessing.synchronize.Event):
-            raise exceptions.ShmLockValueError("exit_event must be a multiprocessing.Event")
+            not isinstance(exit_event, (multiprocessing.synchronize.Event, threading.Event,)):
+            raise exceptions.ShmLockValueError("exit_event must be a multiprocessing.Event "\
+                                               "or thrading.Event")
 
         if not lock_name:
             raise exceptions.ShmLockValueError("lock_name must not be empty")
@@ -92,10 +90,11 @@ class ShmLock(ShmModuleBaseLogger):
         self._config = ShmLockConfig(name=lock_name,
                                      poll_interval=float(poll_interval),
                                      timeout=None, # for __call__
-                                     exit_event=exit_event if exit_event is not None else Event(),
+                                     exit_event=exit_event if exit_event is not None else\
+                                          ExitEventMock(),
                                      track=None,
                                      uuid=ShmUuid(),
-                                     pid = os.getpid())
+                                     pid=os.getpid())
 
         if track is not None:
             # track parameter not supported for python < 3.13
@@ -238,42 +237,54 @@ class ShmLock(ShmModuleBaseLogger):
                                                  "Do not shared locks among processes!")
 
         start_time = time.perf_counter()
-        while (not self._config.exit_event.is_set()) and \
-            (not timeout or time.perf_counter() - start_time < timeout):
-            # enter loop if exit event is not set and either no timeout is set (0/False) or
-            # the passed time of trying to acquire the lock is smaller than the timeout
-            # None means infinite wait
-            try:
-                return self._create_or_fail() # returns True or raises exception
-            except FileExistsError:
-                # shared memory block already exists, i.e. the lock is already acquired
-                self.debug("could not acquire lock %s; "\
-                         "timeout[s] is %s",
-                         self,
-                         timeout)
-                if timeout is False:
-                    # if timeout is explicitly False
-                    #   -> break loop and return False since acquirement failed
-                    break
-                self._config.exit_event.wait(self._config.poll_interval)
-                continue
-            except KeyboardInterrupt as err:
-                # special treatment for keyboard interrupt since this might lead to a
-                # dangling shared memory block. This is only the case if the process is
-                # interrupted somewhere within the shared memory creation process within the
-                # multiprocessing library.
-                warnings.warn("KeyboardInterrupt: process interrupted while trying to "\
-                              f"acquire lock {self}. This might lead to leaking resources. "\
-                              f"""shared memory variable is {getattr(self._shm, "shm", None)}. """ \
-                              "Try to use the query_for_error_after_interrupt() function to " \
-                              "check shared memory integrity. Make sure other processes "\
-                              "are still able to acquire the lock.",
-                              ShmLockDanglingSharedMemoryWarning)
+        try:
+            while (not self._config.exit_event.is_set()) and \
+                (not timeout or time.perf_counter() - start_time < timeout):
+                # enter loop if exit event is not set and either no timeout is set (0/False) or
+                # the passed time of trying to acquire the lock is smaller than the timeout
+                # None means infinite wait
+                try:
+                    return self._create_or_fail() # returns True or raises exception
+                except FileExistsError:
+                    # shared memory block already exists, i.e. the lock is already acquired
+                    self.debug("could not acquire lock %s; "\
+                            "timeout[s] is %s",
+                            self,
+                            timeout)
+                    if timeout is False:
+                        # if timeout is explicitly False
+                        #   -> break loop and return False since acquirement failed
+                        break
+                    self._config.exit_event.wait(self._config.poll_interval)
+                    continue
+                except KeyboardInterrupt as err:
+                    # special treatment for keyboard interrupt since this might lead to a
+                    # dangling shared memory block. This is only the case if the process is
+                    # interrupted somewhere within the shared memory creation process within the
+                    # multiprocessing library.
+                    warnings.warn("KeyboardInterrupt: process interrupted while trying to "\
+                                f"acquire lock {self}. This might lead to leaking resources. "\
+                                "shared memory variable is " \
+                                f"""{getattr(self._shm, "shm", None)}. """ \
+                                "Try to use the query_for_error_after_interrupt() function to " \
+                                "check shared memory integrity. Make sure other processes "\
+                                "are still able to acquire the lock.",
+                                ShmLockDanglingSharedMemoryWarning)
 
-                # raise keyboardinterrupt to stop the process; release() will clean up.
-                raise KeyboardInterrupt("ctrl+c") from err
-        # could not acquire within timeout or exit event is set
-        return False
+                    # raise keyboardinterrupt to stop the process; release() will clean up.
+                    raise KeyboardInterrupt("ctrl+c") from err
+            # could not acquire within timeout or exit event is set
+            return False
+        except OSError as err:
+            # on windows this might happen at program termination e.g. if an unittest fails
+            msg = f"During acquiring lock {self} the exit event handle got invalid (main "\
+                   "process terminated?). Make sure the exit event does not become invalid. "\
+                   "Alternatively use use_mock_exit_event() function which repleaces the exit "\
+                   "event with a mock event which simply uses time.sleep() and has no handle "\
+                   "which might become invalid."
+            self.error(msg)
+            self.release() # make sure lock is released
+            raise OSError(msg) from err
 
     def _create_or_fail(self):
         """
@@ -589,7 +600,9 @@ class ShmLock(ShmModuleBaseLogger):
         """
         self._config.description = description
 
-    def get_exit_event(self) -> Union[multiprocessing.synchronize.Event, threading.Event]:
+    def get_exit_event(self) -> Union[multiprocessing.synchronize.Event,
+                                      threading.Event,
+                                      ExitEventMock]:
         """
         get exit event; if lock should be stopped/prevent from further acquirements, set this
         event.
@@ -598,10 +611,24 @@ class ShmLock(ShmModuleBaseLogger):
 
         Returns
         -------
-        multiprocessing.synchronize.Event
-            set this to stop the lock acquirement
+        multiprocessing.synchronize.Event, threading.Event, ExitEventMock
+            set this to stop i.e. prevent the lock acquirement
         """
         return self._config.exit_event
+
+    def use_mock_exit_event(self):
+        """
+        use mock exit event which replaces the multiprocessing or threading event.
+        This is useful for lock calls within __del__ methods since (at least on Windows) within
+        interative sessions the exit event might be invalid at garbace collection time.
+        In this case it might be useful to use this mock exit event which simply uses a
+        time.sleep()
+        """
+        if isinstance(self._config.exit_event, ExitEventMock):
+            self.debug("mocked exit event already set for lock %s", self)
+            return
+        self._config.exit_event = ExitEventMock()
+        self.debug("using mocked exit event for lock %s", self)
 
     def debug_get_uuid_of_locking_lock(self) -> Optional[str]:
         """

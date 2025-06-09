@@ -116,7 +116,7 @@ with lock(timeout=1) as success:
         # your code
         pass
     else:
-        # sadness i.e. lock could not be acquired after specified timeout
+        # lock could not be acquired after specified timeout
         pass
 
 
@@ -124,6 +124,8 @@ with lock(timeout=1) as success:
 lock.description = "main process lock"
 
 # get exit event and set it in the main process to stop all locks from acquiring
+# NOTE that if no event has been specified during the init, this will be a mocked event
+# i.e. there will not be automatic creations of threading.Event or multiprocessing.Event objects
 lock.get_exit_event()
 
 # get uuid of lock which has currently acquired shared memory
@@ -356,7 +358,7 @@ lock.query_for_error_after_interrupt()
 
 ```
 
-If the shared memory is in an inconsistent state (such as being created but lock does not hold reference) the function raises an exception. Otherwise, if everything is functioning correctly, it simply returns `None`. For further details, see to the function's doc-string.
+If the shared memory is in an inconsistent state (such as being created but lock does not hold reference) the function raises an exception. Otherwise, if everything is functioning correctly, it simply returns `None`. For further details, check the function's doc-string.
 
 
 In case you expect the process being terminated abruptly, you should assure the release via signal module:
@@ -391,6 +393,7 @@ However, please note that in some situations, you might not be able to recover f
 | 3.1.1                      | Minor fix to real-world example in README.md |
 | 3.1.2                      | Use warnings.warn for potential dangling shared memory block |
 | 3.1.3                      | Fix anchors in readme and remove unnecessary space |
+| 4.0.0                      | Handle OSError if event handle gets invalid on Windows. Remove automatic initialization of multiprocessing Event, instead use mock event will simply uses a time.sleep |
 
 ---
 <a name="todos"></a>
