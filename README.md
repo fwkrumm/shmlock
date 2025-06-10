@@ -400,7 +400,7 @@ To ensure safe cleanup, consider alternatives such as `atexit`, `signal.signal`,
 | 3.1.3                      | Fixed anchors in `README.md` and removed unnecessary spaces. |
 | 4.0.0                      | Handled `OSError` when the event handle becomes invalid on Windows. Removed automatic initialization of the multiprocessing event; instead, a mock event simply applies `time.sleep()`. |
 | 4.0.1                      | Fixed properties not being available before acquisition and implemented proper test methods. |
-| 4.0.2                      | Reworked version history |
+| 4.0.2                      | Reworked version history. |
 
 ---
 <a name="todos"></a>
