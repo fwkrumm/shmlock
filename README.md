@@ -388,18 +388,19 @@ To ensure safe cleanup, consider alternatives such as `atexit`, `signal.signal`,
 
 | Version / Git Tag on Master | Description |
 |----------------------------|-------------|
-| 1.0.0                      | First release version providing basic functionality |
-| 1.1.0                      | Add pypi workflow; minor corrections |
-| 2.0.0                      | Added `query_for_error_after_interrupt(...)` function, removed custom (experimental) resource tracker, added many tests for code coverage |
-| 3.0.0                      | Add reentrancy support and remove throw parameter |
-| 3.0.1                      | Minor adjustments in README.md and some workflow files |
-| 3.0.2                      | Added example code to README.md |
-| 3.1.0                      | ShmLockConfig moved to separate file and added support down to Python 3.8 (Union from typing) |
-| 3.1.1                      | Minor fix to real-world example in README.md |
-| 3.1.2                      | Use warnings.warn for potential dangling shared memory block |
-| 3.1.3                      | Fix anchors in readme and remove unnecessary space |
-| 4.0.0                      | Handle OSError if event handle gets invalid on Windows. Remove automatic initialization of multiprocessing Event, instead use mock event will simply uses a time.sleep |
-| 4.0.1                      | Fix properties not being available before aquirement and use proper test methods |
+| 1.0.0                      | Initial release providing basic functionality. |
+| 1.1.0                      | Added PyPI workflow and made minor corrections. |
+| 2.0.0                      | Introduced the `query_for_error_after_interrupt(...)` function, removed the custom (experimental) resource tracker, and added multiple tests to improve code coverage. |
+| 3.0.0                      | Added reentrancy support and removed the `throw` parameter. |
+| 3.0.1                      | Made minor adjustments to `README.md` and several workflow files. |
+| 3.0.2                      | Added example code to `README.md`. |
+| 3.1.0                      | Moved `ShmLockConfig` to a separate file and extended support down to Python 3.8 (`Union` from `typing`). |
+| 3.1.1                      | Made a minor fix to the real-world example in `README.md`. |
+| 3.1.2                      | Replaced direct errors with `warnings.warn` for potential dangling shared memory blocks. |
+| 3.1.3                      | Fixed anchors in `README.md` and removed unnecessary spaces. |
+| 4.0.0                      | Handled `OSError` when the event handle becomes invalid on Windows. Removed automatic initialization of the multiprocessing event; instead, a mock event simply applies `time.sleep()`. |
+| 4.0.1                      | Fixed properties not being available before acquisition and implemented proper test methods. |
+| 4.0.2                      | Reworked version history. |
 
 ---
 <a name="todos"></a>
