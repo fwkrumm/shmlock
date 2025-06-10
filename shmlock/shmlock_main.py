@@ -550,14 +550,16 @@ class ShmLock(ShmModuleBaseLogger):
         """
         check if lock is acquired (alternative api)
         """
-        return self._shm.shm is not None
+        # make sure member exists
+        return getattr(self._shm, "shm", None) is not None
+
 
     @property
     def acquired(self) -> bool:
         """
         check if lock is acquired
         """
-        return self._shm.shm is not None
+        return self.locked
 
     @property
     def name(self) -> str:

@@ -33,4 +33,4 @@ from shmlock.shmlock_main import *
 
 # do NOT alter the following line in any way EXCEPT changing
 # the version number. no comments, no rename, whatsoever
-__version__ = "4.0.0"
+__version__ = "4.0.1"
