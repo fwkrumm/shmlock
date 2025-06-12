@@ -203,8 +203,26 @@ class BasicsTest(unittest.TestCase):
             lock.warning("base logger test warning")
             lock.warn("base logger test warn")
             lock.error("base logger test error")
-            lock.exception("base logger test exception")
+            lock.exception("base logger test exception") # stdouts also NoneType
             lock.critical("base logger test critical")
+
+    def test_create_logger(self):
+        """
+        test the create_logger method which can be used to set up a logger.
+        """
+        log = shmlock.create_logger(
+            name="test_create_logger",
+            level=logging.DEBUG,
+            use_colored_logs=True # only if used if installed
+        )
+
+        log.info("logger test info")
+        log.debug("logger test debug")
+        log.warning("logger test warning")
+        log.error("logger test error")
+        log.exception("logger test exception") # stdouts also NoneType
+        log.critical("logger test critical")
+
 
     def test_repr(self):
         """

@@ -18,13 +18,14 @@ from typing import Union, Optional
 
 __all__ = ["ShmLock",
            "remove_shm_from_resource_tracker",
-           "exceptions"
+           "exceptions",
+           "create_logger"
            ]
 
 # reveal functions for resource tracking adjustments
 import shmlock.shmlock_exceptions as exceptions
 from shmlock.shmlock_monkey_patch import remove_shm_from_resource_tracker
-from shmlock.shmlock_base_logger import ShmModuleBaseLogger
+from shmlock.shmlock_base_logger import ShmModuleBaseLogger, create_logger
 from shmlock.shmlock_uuid import ShmUuid
 from shmlock.shmlock_config import ShmLockConfig, ExitEventMock
 from shmlock.shmlock_warnings import ShmLockDanglingSharedMemoryWarning
