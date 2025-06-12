@@ -107,6 +107,19 @@ class BasicsTest(unittest.TestCase):
         shm_name = str(time.time())
         lock = shmlock.ShmLock(shm_name)
 
+        # check context managers
+        with lock as res:
+            self.assertTrue(res)
+
+        with lock.lock() as res:
+            self.assertTrue(res)
+
+        with lock(timeout=0.1) as res:
+            self.assertTrue(res)
+
+        with lock.lock(timeout=0.1) as res:
+            self.assertTrue(res)
+
         self.assertTrue(lock.acquire())
 
         # due to reentrant lock, this should not block and also return True
@@ -121,6 +134,8 @@ class BasicsTest(unittest.TestCase):
         with lock2(timeout=0.1) as res:
             self.assertFalse(res)
 
+        with lock2.lock(timeout=0.1) as res:
+            self.assertFalse(res)
 
         self.assertTrue(lock.release()) # release should be successful
         self.assertTrue(lock2.acquire()) # not should be acquirable

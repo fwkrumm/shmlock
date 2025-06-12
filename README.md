@@ -160,7 +160,7 @@ import shmlock
 import time
 import uuid
 
-lock = shmlock.ShmLock("lock_name ")
+lock = shmlock.ShmLock("lock_name")
 
 with lock:
     # create (attach to) shared memory for synchronized access
@@ -401,6 +401,7 @@ To ensure safe cleanup, consider alternatives such as `atexit`, `signal.signal`,
 | 4.0.0                      | Handled `OSError` when the event handle becomes invalid on Windows. Removed automatic initialization of the multiprocessing event; instead, a mock event simply applies `time.sleep()`. |
 | 4.0.1                      | Fixed properties not being available before acquisition and implemented proper test methods. |
 | 4.0.2                      | Reworked version history. |
+| 4.0.3                      | More tests and space removal. |
 
 ---
 <a name="todos"></a>
