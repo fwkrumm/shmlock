@@ -233,6 +233,8 @@ class BasicsTest(unittest.TestCase):
         test the logger None, i.e. no logger is set
         """
         shm_name = str(time.time())
+        logger = logging.getLogger("test_logger_none") # we have to provide a logger,
+                                                       # but it will not be used
         lock = shmlock.ShmLock(shm_name)
 
         # nothing should be logged if no logger is set
