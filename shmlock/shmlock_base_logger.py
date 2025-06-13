@@ -16,7 +16,8 @@ def create_logger(name: str = "ShmLockLogger",
                   file_path: str = None,
                   level_file: int = logging.DEBUG,
                   use_colored_logs: bool = True,
-                  fmt: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"):
+                  fmt: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s") -> \
+                    logging.Logger:
     """
     set up a logger with color (if available and enabled) and file logging (if enabled).
     Note that this logger is not set anywhere in the shmlock objects itself, so in case you want
