@@ -5,7 +5,9 @@ from multiprocessing import shared_memory
 import time
 import gc
 import unittest
+import os
 import logging
+import tempfile
 import shmlock
 import shmlock.shmlock_exceptions
 from shmlock.shmlock_uuid import ShmUuid
@@ -263,6 +265,29 @@ class BasicsTest(unittest.TestCase):
             with self.assertLogs(level="ERROR", logger=logger) as assert_log:
                 lock.exception("base logger test exception")
                 # the trailing NoneType None is because there is no exception
+
+    def test_file_logging(self):
+        """
+        test file logging, i.e. logging to a file instead of console.
+        This is useful for debugging and logging in production environments.
+        """
+        log_file_path = tempfile.mktemp(prefix="shmlock_test_log_", suffix=".log")
+        log = shmlock.create_logger(
+            name="test_file_logging",
+            level=logging.DEBUG,
+            use_colored_logs=False,  # file logging does not use colored logs
+            level_file=logging.WARNING,
+            file_path=log_file_path
+        )
+
+        log.debug("not to file")
+        log.warning("to file")
+
+        self.assertTrue(os.path.isfile(log_file_path))
+        with open(log_file_path, "r") as f:
+            log_content = f.read()
+            self.assertIn("to file", log_content)
+            self.assertNotIn("not to file", log_content)
 
     def test_create_logger(self):
         """
