@@ -194,69 +194,76 @@ class BasicsTest(unittest.TestCase):
         logger = logging.getLogger("test_logger")
         logger.setLevel(logging.NOTSET)
 
-        for log in (logger, None,):
-            lock = shmlock.ShmLock(shm_name, logger=log)
+        lock = shmlock.ShmLock(shm_name, logger=logger)
 
-            if log is not None:
-                # check that logger logs correctly
-                with self.assertLogs(level="INFO", logger=logger) as assert_log:
-                    lock.info("base logger test info")
-                    self.assertEqual(assert_log.output, ["INFO:test_logger:base logger test info"])
-                with self.assertLogs(level="DEBUG", logger=logger) as assert_log:
-                    lock.debug("base logger test debug")
-                    self.assertEqual(assert_log.output,
-                                     ["DEBUG:test_logger:base logger test debug"])
-                with self.assertLogs(level="WARNING", logger=logger) as assert_log:
-                    lock.warning("base logger test warning")
-                with self.assertLogs(level="WARNING", logger=logger) as assert_log:
-                    lock.warn("base logger test warn")
-                    self.assertEqual(assert_log.output,
-                                     ["WARNING:test_logger:base logger test warn"])
-                with self.assertLogs(level="ERROR", logger=logger) as assert_log:
-                    lock.error("base logger test error")
-                    self.assertEqual(assert_log.output,
-                                     ["ERROR:test_logger:base logger test error"])
-                with self.assertLogs(level="CRITICAL", logger=logger) as assert_log:
-                    lock.critical("base logger test critical")
-                    self.assertEqual(assert_log.output,
-                                     ["CRITICAL:test_logger:base logger test critical"])
-                with self.assertLogs(level="ERROR", logger=logger) as assert_log:
-                    lock.exception("base logger test exception")
-                    # the trailing NoneType None is because there is no exception
-                    self.assertEqual(assert_log.output,
-                                     ["ERROR:test_logger:base logger test exception"\
-                                      "\nNoneType: None"])
+        # check that logger logs correctly
+        with self.assertLogs(level="INFO", logger=logger) as assert_log:
+            lock.info("base logger test info")
+            self.assertEqual(assert_log.output, ["INFO:test_logger:base logger test info"])
+        with self.assertLogs(level="DEBUG", logger=logger) as assert_log:
+            lock.debug("base logger test debug")
+            self.assertEqual(assert_log.output,
+                                ["DEBUG:test_logger:base logger test debug"])
+        with self.assertLogs(level="WARNING", logger=logger) as assert_log:
+            lock.warning("base logger test warning")
+        with self.assertLogs(level="WARNING", logger=logger) as assert_log:
+            lock.warn("base logger test warn")
+            self.assertEqual(assert_log.output,
+                                ["WARNING:test_logger:base logger test warn"])
+        with self.assertLogs(level="ERROR", logger=logger) as assert_log:
+            lock.error("base logger test error")
+            self.assertEqual(assert_log.output,
+                                ["ERROR:test_logger:base logger test error"])
+        with self.assertLogs(level="CRITICAL", logger=logger) as assert_log:
+            lock.critical("base logger test critical")
+            self.assertEqual(assert_log.output,
+                                ["CRITICAL:test_logger:base logger test critical"])
+        with self.assertLogs(level="ERROR", logger=logger) as assert_log:
+            lock.exception("base logger test exception")
+            # the trailing NoneType None is because there is no exception
+            self.assertEqual(assert_log.output,
+                                ["ERROR:test_logger:base logger test exception"\
+                                "\nNoneType: None"])
 
-            else:
-                # nothing should be logged if no logger is set
-                with self.assertRaises(AssertionError):
-                    with self.assertLogs(level="INFO", logger=logger) as assert_log:
-                        lock.info("base logger test info")
-                        self.assertEqual(assert_log.output, [])
-                with self.assertRaises(AssertionError):
-                    with self.assertLogs(level="DEBUG", logger=logger) as assert_log:
-                        lock.debug("base logger test debug")
-                        self.assertEqual(assert_log.output, [])
-                with self.assertRaises(AssertionError):
-                    with self.assertLogs(level="WARNING", logger=logger) as assert_log:
-                        lock.warning("base logger test warning")
-                        self.assertEqual(assert_log.output, [])
-                with self.assertRaises(AssertionError):
-                    with self.assertLogs(level="WARNING", logger=logger) as assert_log:
-                        lock.warn("base logger test warn")
-                        self.assertEqual(assert_log.output, [])
-                with self.assertRaises(AssertionError):
-                    with self.assertLogs(level="ERROR", logger=logger) as assert_log:
-                        lock.error("base logger test error")
-                        self.assertEqual(assert_log.output, [])
-                with self.assertRaises(AssertionError):
-                    with self.assertLogs(level="CRITICAL", logger=logger) as assert_log:
-                        lock.critical("base logger test critical")
-                        self.assertEqual(assert_log.output, [])
-                with self.assertRaises(AssertionError):
-                    with self.assertLogs(level="ERROR", logger=logger) as assert_log:
-                        lock.exception("base logger test exception")
-                        # the trailing NoneType None is because there is no exception
+
+
+
+    def test_logger_None(self):
+        """
+        test the logger None, i.e. no logger is set
+        """
+        shm_name = str(time.time())
+        lock = shmlock.ShmLock(shm_name)
+
+        # nothing should be logged if no logger is set
+        with self.assertRaises(AssertionError):
+            with self.assertLogs(level="INFO", logger=logger) as assert_log:
+                lock.info("base logger test info")
+                self.assertEqual(assert_log.output, [])
+        with self.assertRaises(AssertionError):
+            with self.assertLogs(level="DEBUG", logger=logger) as assert_log:
+                lock.debug("base logger test debug")
+                self.assertEqual(assert_log.output, [])
+        with self.assertRaises(AssertionError):
+            with self.assertLogs(level="WARNING", logger=logger) as assert_log:
+                lock.warning("base logger test warning")
+                self.assertEqual(assert_log.output, [])
+        with self.assertRaises(AssertionError):
+            with self.assertLogs(level="WARNING", logger=logger) as assert_log:
+                lock.warn("base logger test warn")
+                self.assertEqual(assert_log.output, [])
+        with self.assertRaises(AssertionError):
+            with self.assertLogs(level="ERROR", logger=logger) as assert_log:
+                lock.error("base logger test error")
+                self.assertEqual(assert_log.output, [])
+        with self.assertRaises(AssertionError):
+            with self.assertLogs(level="CRITICAL", logger=logger) as assert_log:
+                lock.critical("base logger test critical")
+                self.assertEqual(assert_log.output, [])
+        with self.assertRaises(AssertionError):
+            with self.assertLogs(level="ERROR", logger=logger) as assert_log:
+                lock.exception("base logger test exception")
+                # the trailing NoneType None is because there is no exception
 
     def test_create_logger(self):
         """
