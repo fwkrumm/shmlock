@@ -284,7 +284,7 @@ class BasicsTest(unittest.TestCase):
         log.warning("to file")
 
         self.assertTrue(os.path.isfile(log_file_path))
-        with open(log_file_path, "r") as f:
+        with open(log_file_path, "r", encoding="UTF-8") as f:
             log_content = f.read()
             self.assertIn("to file", log_content)
             self.assertNotIn("not to file", log_content)
