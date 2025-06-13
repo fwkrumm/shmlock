@@ -145,6 +145,11 @@ with lock:
         pass
     # still locked, lock.release() would raise Exception unless force parameter is used
 
+# create a logger (helper function)
+import logging
+logger = shmlock.create_logger(name="shmlogger", level=logging.DEBUG) # also check doc-string
+lock_with_logger = shmlock.ShmLock("shm_lock", logger=logger)
+
 ```
 
 ### Real-world Example
@@ -160,7 +165,7 @@ import shmlock
 import time
 import uuid
 
-lock = shmlock.ShmLock("lock_name ")
+lock = shmlock.ShmLock("lock_name")
 
 with lock:
     # create (attach to) shared memory for synchronized access
@@ -401,6 +406,7 @@ To ensure safe cleanup, consider alternatives such as `atexit`, `signal.signal`,
 | 4.0.0                      | Handled `OSError` when the event handle becomes invalid on Windows. Removed automatic initialization of the multiprocessing event; instead, a mock event simply applies `time.sleep()`. |
 | 4.0.1                      | Fixed properties not being available before acquisition and implemented proper test methods. |
 | 4.0.2                      | Reworked version history. |
+| 4.1.0                      | Added a helper function to create a logger, added more tests and removed unnecessary space. |
 
 ---
 <a name="todos"></a>
