@@ -225,9 +225,6 @@ class BasicsTest(unittest.TestCase):
                                 ["ERROR:test_logger:base logger test exception"\
                                 "\nNoneType: None"])
 
-
-
-
     def test_logger_None(self):
         """
         test the logger None, i.e. no logger is set
