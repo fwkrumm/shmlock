@@ -1,7 +1,7 @@
 """
 base logger, only a wrapper around the logger
 
-also provides a helper function to create a logger with color and file logging (if desired).
+Also provides a helper function to create a logger with color and file logging (if desired).
 """
 import logging
 try:

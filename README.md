@@ -406,7 +406,7 @@ To ensure safe cleanup, consider alternatives such as `atexit`, `signal.signal`,
 | 4.0.0                      | Handled `OSError` when the event handle becomes invalid on Windows. Removed automatic initialization of the multiprocessing event; instead, a mock event simply applies `time.sleep()`. |
 | 4.0.1                      | Fixed properties not being available before acquisition and implemented proper test methods. |
 | 4.0.2                      | Reworked version history. |
-| 4.1.0                      | Added a helper function to create a logger, added more tests and removes unnecessary space. |
+| 4.1.0                      | Added a helper function to create a logger, added more tests and removed unnecessary space. |
 
 ---
 <a name="todos"></a>
