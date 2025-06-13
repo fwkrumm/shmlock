@@ -2,6 +2,9 @@
 base logger, only a wrapper around the logger
 
 Also provides a helper function to create a logger with color and file logging (if desired).
+
+Potentially make this an own package or at least own repo since the related tests have nothing to
+do with the shmlock anymore.
 """
 import logging
 try:
