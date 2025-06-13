@@ -1,5 +1,7 @@
 """
 base logger, only a wrapper around the logger
+
+also provides a helper function to create a logger with color and file logging (if desired).
 """
 import logging
 try:
@@ -16,8 +18,10 @@ def create_logger(name: str = "ShmLockLogger",
                   use_colored_logs: bool = True,
                   fmt: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"):
     """
-    set up a logger. Note that this logger has still to be set as argument
-    for shmlock objects.
+    set up a logger with color (if available and enabled) and file logging (if enabled).
+    Note that this logger is not set anywhere in the shmlock objects itself, so in case you want
+    them to use it you have to manually set if via
+    ShmLock(..., logger=create_logger(...))
 
     NOTE that this is only a helper function which is never called automatically.
 
@@ -48,7 +52,7 @@ def create_logger(name: str = "ShmLockLogger",
 
     # set up logger
     logger = logging.getLogger(name)
-    logger.setLevel(level_file) # has to use file level for proper functionality
+    logger.setLevel(min(level_file, level)) # use lower level of the two to avoid missing logs
 
     # prevent propagating of logs to root logger
     logger.propagate = False
