@@ -208,10 +208,6 @@ class BasicsTest(unittest.TestCase):
                                 ["DEBUG:test_logger:base logger test debug"])
         with self.assertLogs(level="WARNING", logger=logger) as assert_log:
             lock.warning("base logger test warning")
-        with self.assertLogs(level="WARNING", logger=logger) as assert_log:
-            lock.warn("base logger test warn")
-            self.assertEqual(assert_log.output,
-                                ["WARNING:test_logger:base logger test warn"])
         with self.assertLogs(level="ERROR", logger=logger) as assert_log:
             lock.error("base logger test error")
             self.assertEqual(assert_log.output,
@@ -236,31 +232,23 @@ class BasicsTest(unittest.TestCase):
                                                        # but it will not be used
         lock = shmlock.ShmLock(shm_name)
 
-        # nothing should be logged if no logger is set
+        # nothing should be logged if no logger is set; thus there should be an assertion error
+        # raised from unittest that no logs where captured
         with self.assertRaises(AssertionError):
             with self.assertLogs(level="INFO", logger=logger) as assert_log:
                 lock.info("base logger test info")
-                self.assertEqual(assert_log.output, [])
         with self.assertRaises(AssertionError):
             with self.assertLogs(level="DEBUG", logger=logger) as assert_log:
                 lock.debug("base logger test debug")
-                self.assertEqual(assert_log.output, [])
         with self.assertRaises(AssertionError):
             with self.assertLogs(level="WARNING", logger=logger) as assert_log:
                 lock.warning("base logger test warning")
-                self.assertEqual(assert_log.output, [])
-        with self.assertRaises(AssertionError):
-            with self.assertLogs(level="WARNING", logger=logger) as assert_log:
-                lock.warn("base logger test warn")
-                self.assertEqual(assert_log.output, [])
         with self.assertRaises(AssertionError):
             with self.assertLogs(level="ERROR", logger=logger) as assert_log:
                 lock.error("base logger test error")
-                self.assertEqual(assert_log.output, [])
         with self.assertRaises(AssertionError):
             with self.assertLogs(level="CRITICAL", logger=logger) as assert_log:
                 lock.critical("base logger test critical")
-                self.assertEqual(assert_log.output, [])
         with self.assertRaises(AssertionError):
             with self.assertLogs(level="ERROR", logger=logger) as assert_log:
                 lock.exception("base logger test exception")

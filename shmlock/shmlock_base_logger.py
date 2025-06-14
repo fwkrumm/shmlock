@@ -131,12 +131,6 @@ class ShmModuleBaseLogger:
         if self._logger is not None:
             self._logger.warning(message, *args)
 
-    def warn(self, message: str, *args):
-        """
-        log message warning
-        """
-        self.warning(message, *args)
-
     def error(self, message: str, *args):
         """
         log message error
