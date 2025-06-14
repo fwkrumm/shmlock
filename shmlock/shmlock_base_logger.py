@@ -56,7 +56,10 @@ def create_logger(name: str = "ShmLockLogger",
 
     # set up logger
     logger = logging.getLogger(name)
-    logger.setLevel(min(level_file, level)) # use lower level of the two to avoid missing logs
+    if file_path is not None:
+        logger.setLevel(min(level_file, level)) # use lower level of the two to avoid missing logs
+    else:
+        logger.setLevel(level)
 
     # prevent propagating of logs to root logger
     logger.propagate = False
