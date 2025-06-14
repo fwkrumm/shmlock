@@ -5,7 +5,9 @@ from multiprocessing import shared_memory
 import time
 import gc
 import unittest
+import os
 import logging
+import tempfile
 import shmlock
 import shmlock.shmlock_exceptions
 from shmlock.shmlock_uuid import ShmUuid
@@ -107,6 +109,19 @@ class BasicsTest(unittest.TestCase):
         shm_name = str(time.time())
         lock = shmlock.ShmLock(shm_name)
 
+        # check context managers
+        with lock as res:
+            self.assertTrue(res)
+
+        with lock.lock() as res:
+            self.assertTrue(res)
+
+        with lock(timeout=0.1) as res:
+            self.assertTrue(res)
+
+        with lock.lock(timeout=0.1) as res:
+            self.assertTrue(res)
+
         self.assertTrue(lock.acquire())
 
         # due to reentrant lock, this should not block and also return True
@@ -121,6 +136,8 @@ class BasicsTest(unittest.TestCase):
         with lock2(timeout=0.1) as res:
             self.assertFalse(res)
 
+        with lock2.lock(timeout=0.1) as res:
+            self.assertFalse(res)
 
         self.assertTrue(lock.release()) # release should be successful
         self.assertTrue(lock2.acquire()) # not should be acquirable
@@ -179,17 +196,128 @@ class BasicsTest(unittest.TestCase):
         logger = logging.getLogger("test_logger")
         logger.setLevel(logging.NOTSET)
 
-        for log in (logger, None,):
-            lock = shmlock.ShmLock(shm_name, logger=log)
+        lock = shmlock.ShmLock(shm_name, logger=logger)
 
-            # just check that they do not throw exceptions if no logger is set and with logger
+        # check that logger logs correctly
+        with self.assertLogs(level="INFO", logger=logger) as assert_log:
             lock.info("base logger test info")
+            self.assertEqual(assert_log.output, ["INFO:test_logger:base logger test info"])
+        with self.assertLogs(level="DEBUG", logger=logger) as assert_log:
             lock.debug("base logger test debug")
+            self.assertEqual(assert_log.output,
+                                ["DEBUG:test_logger:base logger test debug"])
+        with self.assertLogs(level="WARNING", logger=logger) as assert_log:
             lock.warning("base logger test warning")
-            lock.warn("base logger test warn")
+        with self.assertLogs(level="ERROR", logger=logger) as assert_log:
             lock.error("base logger test error")
-            lock.exception("base logger test exception")
+            self.assertEqual(assert_log.output,
+                                ["ERROR:test_logger:base logger test error"])
+        with self.assertLogs(level="CRITICAL", logger=logger) as assert_log:
             lock.critical("base logger test critical")
+            self.assertEqual(assert_log.output,
+                                ["CRITICAL:test_logger:base logger test critical"])
+        with self.assertLogs(level="ERROR", logger=logger) as assert_log:
+            lock.exception("base logger test exception")
+            # the trailing NoneType None is because there is no exception
+            self.assertEqual(assert_log.output,
+                                ["ERROR:test_logger:base logger test exception"\
+                                "\nNoneType: None"])
+
+    def test_logger_none(self):
+        """
+        test the logger None, i.e. no logger is set
+        """
+        shm_name = str(time.time())
+        logger = logging.getLogger("test_logger_none") # we have to provide a logger,
+                                                       # but it will not be used
+        lock = shmlock.ShmLock(shm_name)
+
+        # nothing should be logged if no logger is set; thus there should be an assertion error
+        # raised from unittest that no logs were captured
+        with self.assertRaises(AssertionError):
+            with self.assertLogs(level="INFO", logger=logger) as _:
+                lock.info("base logger test info")
+        with self.assertRaises(AssertionError):
+            with self.assertLogs(level="DEBUG", logger=logger) as _:
+                lock.debug("base logger test debug")
+        with self.assertRaises(AssertionError):
+            with self.assertLogs(level="WARNING", logger=logger) as _:
+                lock.warning("base logger test warning")
+        with self.assertRaises(AssertionError):
+            with self.assertLogs(level="ERROR", logger=logger) as _:
+                lock.error("base logger test error")
+        with self.assertRaises(AssertionError):
+            with self.assertLogs(level="CRITICAL", logger=logger) as _:
+                lock.critical("base logger test critical")
+        with self.assertRaises(AssertionError):
+            with self.assertLogs(level="ERROR", logger=logger) as _:
+                lock.exception("base logger test exception")
+                # the trailing NoneType None is because there is no exception
+
+    def test_file_logging(self):
+        """
+        test file logging, i.e. logging to a file instead of console.
+        This is useful for debugging and logging in production environments.
+        """
+
+        with tempfile.NamedTemporaryFile(prefix="shmlock_test_log_",
+                                         suffix=".log",
+                                         delete=False) as temp_file:
+            log_file_path = temp_file.name
+            log = shmlock.create_logger(
+                name="test_file_logging",
+                level=logging.DEBUG,
+                use_colored_logs=False,  # file logging does not use colored logs
+                level_file=logging.WARNING,
+                file_path=log_file_path
+            )
+
+            log.debug("not to file")
+            log.warning("to file")
+
+            self.assertTrue(os.path.isfile(log_file_path))
+            with open(log_file_path, "r", encoding="UTF-8") as f:
+                log_content = f.read()
+                self.assertIn("to file", log_content)
+                self.assertNotIn("not to file", log_content)
+
+    def test_create_logger(self):
+        """
+        test the create_logger method which can be used to set up a logger.
+        """
+        log = shmlock.create_logger(
+            name="test_create_logger",
+            level=logging.DEBUG,
+            use_colored_logs=True # only used if installed
+        )
+
+        with self.assertLogs(level="INFO", logger=log) as assert_log:
+            log.info("logger test info")
+            self.assertEqual(assert_log.output, ["INFO:test_create_logger:logger test info"])
+
+        with self.assertLogs(level="DEBUG", logger=log) as assert_log:
+            log.debug("logger test debug")
+            self.assertEqual(assert_log.output, ["DEBUG:test_create_logger:logger test debug"])
+
+        with self.assertLogs(level="WARNING", logger=log) as assert_log:
+            log.warning("logger test warning")
+            self.assertEqual(assert_log.output, ["WARNING:test_create_logger:logger test warning"])
+
+        with self.assertLogs(level="ERROR", logger=log) as assert_log:
+            log.error("logger test error")
+            self.assertEqual(assert_log.output, ["ERROR:test_create_logger:logger test error"])
+
+        with self.assertLogs(level="CRITICAL", logger=log) as assert_log:
+            log.critical("logger test critical")
+            self.assertEqual(assert_log.output,
+                             ["CRITICAL:test_create_logger:logger test critical"])
+
+        with self.assertLogs(level="ERROR", logger=log) as assert_log:
+            # internally exception is error level
+            log.exception("logger test exception")
+            # the trailing NoneType None is because there is no exception
+            self.assertEqual(assert_log.output,
+                             ["ERROR:test_create_logger:logger test exception\nNoneType: None"])
 
     def test_repr(self):
         """

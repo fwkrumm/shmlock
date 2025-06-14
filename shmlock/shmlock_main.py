@@ -18,13 +18,14 @@ from typing import Union, Optional
 
 __all__ = ["ShmLock",
            "remove_shm_from_resource_tracker",
-           "exceptions"
+           "exceptions",
+           "create_logger"
            ]
 
 # reveal functions for resource tracking adjustments
 import shmlock.shmlock_exceptions as exceptions
 from shmlock.shmlock_monkey_patch import remove_shm_from_resource_tracker
-from shmlock.shmlock_base_logger import ShmModuleBaseLogger
+from shmlock.shmlock_base_logger import ShmModuleBaseLogger, create_logger
 from shmlock.shmlock_uuid import ShmUuid
 from shmlock.shmlock_config import ShmLockConfig, ExitEventMock
 from shmlock.shmlock_warnings import ShmLockDanglingSharedMemoryWarning
@@ -319,13 +320,13 @@ class ShmLock(ShmModuleBaseLogger):
             # supported for python >= 3.13. We check that in the constructor however
             # pylint still reports it. There might be a better way to handle this?
             self._shm.shm = shared_memory.SharedMemory(name=self._config.name, # pylint:disable=(unexpected-keyword-arg)
-                                                    create=True,
-                                                    size=LOCK_SHM_SIZE,
-                                                    track=self._config.track)
+                                                       create=True,
+                                                       size=LOCK_SHM_SIZE,
+                                                       track=self._config.track)
         else:
             self._shm.shm = shared_memory.SharedMemory(name=self._config.name,
-                                                    create=True,
-                                                    size=LOCK_SHM_SIZE)
+                                                       create=True,
+                                                       size=LOCK_SHM_SIZE)
 
         # NOTE: shared memory is after creation(!) not filled with the uuid data in
         # the same operation. so it MIGHT be possible that the shm block has been
