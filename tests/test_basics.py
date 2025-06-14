@@ -235,22 +235,22 @@ class BasicsTest(unittest.TestCase):
         # nothing should be logged if no logger is set; thus there should be an assertion error
         # raised from unittest that no logs where captured
         with self.assertRaises(AssertionError):
-            with self.assertLogs(level="INFO", logger=logger) as assert_log:
+            with self.assertLogs(level="INFO", logger=logger) as _:
                 lock.info("base logger test info")
         with self.assertRaises(AssertionError):
-            with self.assertLogs(level="DEBUG", logger=logger) as assert_log:
+            with self.assertLogs(level="DEBUG", logger=logger) as _:
                 lock.debug("base logger test debug")
         with self.assertRaises(AssertionError):
-            with self.assertLogs(level="WARNING", logger=logger) as assert_log:
+            with self.assertLogs(level="WARNING", logger=logger) as _:
                 lock.warning("base logger test warning")
         with self.assertRaises(AssertionError):
-            with self.assertLogs(level="ERROR", logger=logger) as assert_log:
+            with self.assertLogs(level="ERROR", logger=logger) as _:
                 lock.error("base logger test error")
         with self.assertRaises(AssertionError):
-            with self.assertLogs(level="CRITICAL", logger=logger) as assert_log:
+            with self.assertLogs(level="CRITICAL", logger=logger) as _:
                 lock.critical("base logger test critical")
         with self.assertRaises(AssertionError):
-            with self.assertLogs(level="ERROR", logger=logger) as assert_log:
+            with self.assertLogs(level="ERROR", logger=logger) as _:
                 lock.exception("base logger test exception")
                 # the trailing NoneType None is because there is no exception
 
