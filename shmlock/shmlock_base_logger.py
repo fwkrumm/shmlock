@@ -24,7 +24,7 @@ def create_logger(name: str = "ShmLockLogger",
     """
     set up a logger with color (if available and enabled) and file logging (if enabled).
     Note that this logger is not set anywhere in the shmlock objects itself, so in case you want
-    them to use it you have to manually set if via
+    them to use it you have to manually set it via
     ShmLock(..., logger=create_logger(...))
 
     NOTE that this is only a helper function which is never called automatically.
