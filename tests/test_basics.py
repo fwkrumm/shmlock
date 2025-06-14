@@ -233,7 +233,7 @@ class BasicsTest(unittest.TestCase):
         lock = shmlock.ShmLock(shm_name)
 
         # nothing should be logged if no logger is set; thus there should be an assertion error
-        # raised from unittest that no logs where captured
+        # raised from unittest that no logs were captured
         with self.assertRaises(AssertionError):
             with self.assertLogs(level="INFO", logger=logger) as _:
                 lock.info("base logger test info")
