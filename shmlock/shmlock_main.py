@@ -320,13 +320,13 @@ class ShmLock(ShmModuleBaseLogger):
             # supported for python >= 3.13. We check that in the constructor however
             # pylint still reports it. There might be a better way to handle this?
             self._shm.shm = shared_memory.SharedMemory(name=self._config.name, # pylint:disable=(unexpected-keyword-arg)
-                                                    create=True,
-                                                    size=LOCK_SHM_SIZE,
-                                                    track=self._config.track)
+                                                       create=True,
+                                                       size=LOCK_SHM_SIZE,
+                                                       track=self._config.track)
         else:
             self._shm.shm = shared_memory.SharedMemory(name=self._config.name,
-                                                    create=True,
-                                                    size=LOCK_SHM_SIZE)
+                                                       create=True,
+                                                       size=LOCK_SHM_SIZE)
 
         # NOTE: shared memory is after creation(!) not filled with the uuid data in
         # the same operation. so it MIGHT be possible that the shm block has been
