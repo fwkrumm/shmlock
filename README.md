@@ -407,10 +407,11 @@ To ensure safe cleanup, consider alternatives such as `atexit`, `signal.signal`,
 | 4.0.1                      | Fixed properties not being available before acquisition and implemented proper test methods. |
 | 4.0.2                      | Reworked version history. |
 | 4.1.0                      | Added a helper function to create a logger, added more tests and removed unnecessary space. |
+| 4.1.1                      | Fulfilled community standards. |
 
 ---
 <a name="todos"></a>
 <a id="todos"></a>
 ## ToDos
 
-- TBD
+- fulfill community standards; cf. https://github.com/fwkrumm/shmlock/community
