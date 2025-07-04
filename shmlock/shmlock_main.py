@@ -529,7 +529,7 @@ class ShmLock(ShmModuleBaseLogger):
             # failed type check
             pass
 
-        if force is False and getattr(self._shm, "counter", 0) > 0:
+        if (not force) and getattr(self._shm, "counter", 0) > 0:
             # for example if you try to release lock within context manager
             raise exceptions.ShmLockRuntimeError(f"lock {self} is still acquired by this "\
                 "thread via contextmanager or __enter__ call.")
