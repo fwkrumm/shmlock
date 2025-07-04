@@ -737,7 +737,7 @@ class ShmLock(ShmModuleBaseLogger):
 
 
         if os.name == "nt" and register_console_handler:
-            if win32api is not None and  win32con is not None:
+            if win32api is not None and win32con is not None:
                 # only for windows systems which us necessary if a console is closed
                 def console_handler(ctrl_type):
                     if ctrl_type in (win32con.CTRL_C_EVENT,
