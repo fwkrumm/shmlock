@@ -706,6 +706,7 @@ class ShmLock(ShmModuleBaseLogger):
         """
         if os.name == "posix" and register_signal:
 
+            # get potentially existing signal handlers
             existing_handlers_sigint = signal.getsignal(signal.SIGINT)
             existing_handlers_sigterm = signal.getsignal(signal.SIGTERM)
             existing_handlers_sighup = signal.getsignal(signal.SIGHUP)
@@ -724,13 +725,14 @@ class ShmLock(ShmModuleBaseLogger):
                 if callable(existing_handlers_sighup):
                     existing_handlers_sighup(signum, frame)
 
+            # register signal handlers
             signal.signal(signal.SIGINT, clean_up)
             signal.signal(signal.SIGTERM, clean_up)
             signal.signal(signal.SIGHUP, clean_up)
 
 
         if os.name == "nt" and register_console_handler:
-
+            # only for windows systems which us necessary if a console is closed
             def console_handler(ctrl_type):
                 if ctrl_type in (win32con.CTRL_C_EVENT,
                                  win32con.CTRL_CLOSE_EVENT,
@@ -743,6 +745,7 @@ class ShmLock(ShmModuleBaseLogger):
             win32api.SetConsoleCtrlHandler(console_handler, True)
 
         if register_weakref:
+            # register weakref handler to clean up the shared memory
             weakref.finalize(self, self.release, force=True)
 
         if register_atexit:
@@ -752,4 +755,5 @@ class ShmLock(ShmModuleBaseLogger):
             atexit.register(self.release, force=True)
 
         if call_gc:
+            # call garbage collector
             gc.collect()
