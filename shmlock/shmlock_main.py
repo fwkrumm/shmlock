@@ -36,8 +36,13 @@ from shmlock.shmlock_warnings import ShmLockDanglingSharedMemoryWarning
 
 
 if os.name == "nt":
-    import win32api # pylint: disable=import-error
-    import win32con # pylint: disable=import-error
+    try:
+        import win32api # pylint: disable=import-error
+        import win32con # pylint: disable=import-error
+    except ImportError:
+        # prevents console handler on exit
+        win32api = None
+        win32con = None
 else:
     # on posix systems we do not need to import win32api and win32con
     win32api = None
@@ -732,17 +737,23 @@ class ShmLock(ShmModuleBaseLogger):
 
 
         if os.name == "nt" and register_console_handler:
-            # only for windows systems which us necessary if a console is closed
-            def console_handler(ctrl_type):
-                if ctrl_type in (win32con.CTRL_C_EVENT,
-                                 win32con.CTRL_CLOSE_EVENT,
-                                 win32con.CTRL_LOGOFF_EVENT,
-                                 win32con.CTRL_SHUTDOWN_EVENT,):
-                    self.release(force=True)
-                    return True  # Prevent immediate termination if possible
-                return False  # Continue default behavior
+            if win32api is not None and  win32con is not None:
+                # only for windows systems which us necessary if a console is closed
+                def console_handler(ctrl_type):
+                    if ctrl_type in (win32con.CTRL_C_EVENT,
+                                    win32con.CTRL_CLOSE_EVENT,
+                                    win32con.CTRL_LOGOFF_EVENT,
+                                    win32con.CTRL_SHUTDOWN_EVENT,):
+                        self.release(force=True)
+                        return True  # Prevent immediate termination if possible
+                    return False  # Continue default behavior
 
-            win32api.SetConsoleCtrlHandler(console_handler, True)
+                win32api.SetConsoleCtrlHandler(console_handler, True)
+            else:
+                self.error("win32api or win32con is not available. "\
+                           "Cannot register console handler for lock %s. "\
+                           "Make sure you have the pywin32 package installed.",
+                           self)
 
         if register_weakref:
             # register weakref handler to clean up the shared memory
