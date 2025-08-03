@@ -376,7 +376,7 @@ In case you expect the process being terminated abruptly, you can use the follow
 ```python
 s = shmlock.ShmLock("lock_name")
 
-# the following functions will (depending on parameters) register cleanup via atexit module (nt and posix), via signale module (posix only), we weakref.finalize (nt and posix) and via win32api (console handler, nt only) and trigger garbage collection, respectively.
+# the following functions will (depending on parameters) register cleanup via atexit module (nt and posix), via signal module (for SIGINT, SIGTERM and SIGHUP; posix only), we weakref.finalize (nt and posix) and via win32api (console handler, nt only) and trigger garbage collection, respectively.
 s.add_exit_handlers(register_atexit = True,
                     register_signal = True,
                     register_weakref = True,
