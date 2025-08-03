@@ -2,6 +2,10 @@ name: CI_ShmLock
 
 on: [push, pull_request]
 
+# Limit GITHUB_TOKEN permissions
+permissions:
+  contents: read
+
 jobs:
   Unittests:
     # run unit tests (some are already integration tests)
@@ -17,13 +21,11 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
-        run:
-          pip install -r requirements.txt
+        run: pip install -r requirements.txt
       - name: Run Tests from local files
         run: |
           python -m coverage run -m unittest discover
           coverage report -m
-
 
   Examples:
     # run examples from ./examples folder
@@ -40,17 +42,13 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install Windows-specific requirements
         if: runner.os == 'Windows'
-        run: 
-          pip install -r requirements_win.txt
+        run: pip install -r requirements_win.txt
       - name: Install shmlock and dependencies
-        run:
-          pip install . -r requirements.txt
+        run: pip install . -r requirements.txt
       - name: Run Examples from installed package
-        # the examples will prioritize the locally installed package
         run: |
           python ./examples/performance_analysis/run_perf.py
           python ./examples/performance_analysis/run_poll_perf.py
-
 
   Pylint:
     # run pylint on source code and examples (only for linux and python 3.13.*)
@@ -62,8 +60,7 @@ jobs:
         with:
           python-version: 3.13.*
       - name: Install dependencies
-        run:
-          pip install -r requirements.txt
+        run: pip install -r requirements.txt
       - name: Run pylint
         run: |
           pylint --rcfile=.pylintrc tests
