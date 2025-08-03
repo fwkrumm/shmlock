@@ -414,10 +414,11 @@ To ensure safe cleanup, consider alternatives such as `atexit`, `signal.signal`,
 | 4.0.2                      | Reworked version history. |
 | 4.1.0                      | Added a helper function to create a logger, added more tests and removed unnecessary space. |
 | 4.2.0                      | Added function to automatically register exit handlers for process termination. |
+| 4.2.1                      | Fulfilled community standards. |
 
 ---
 <a name="todos"></a>
 <a id="todos"></a>
 ## ToDos
 
-- TBD
+- fulfill community standards; cf. https://github.com/fwkrumm/shmlock/community
