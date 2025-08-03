@@ -36,7 +36,7 @@ Notable examples include a file or a shared memory block, which may be modified 
 | You want a lock without passing lock objects around | You do not want a lock that uses a polling interval (i.e. a sleep interval) |
 | You need a simple locking mechanism | You require very high performance and a large number of acquisitions |
 | You want to avoid file-based or server-client-based locks (like filelock, Redis, pyzmq, etc.) | You are not comfortable using shared memory as a lock mechanism |
-| You do not want the lock to add dependencies to your project |   |
+| You do not want the lock to add dependencies to your project (despite pywin32 on Windows optionally)|   |
 
 
 So if you chose to use this module it is best to keep the number of synchronized accesses not too high.
@@ -417,6 +417,7 @@ To ensure safe cleanup, consider alternatives such as `atexit`, `signal.signal`,
 | 4.2.1                      | Added community files (templates, code of conduct, security). |
 | 4.2.2                      | Added workflow permissions. |
 | 4.2.3                      | Moved pull request template to correct location in .github folder. |
+| 4.2.4                      | Minor correction to readme. |
 
 ---
 <a name="todos"></a>
