@@ -415,6 +415,7 @@ To ensure safe cleanup, consider alternatives such as `atexit`, `signal.signal`,
 | 4.1.0                      | Added a helper function to create a logger, added more tests and removed unnecessary space. |
 | 4.2.0                      | Added function to automatically register exit handlers for process termination. |
 | 4.2.1                      | Added community files (templates, code of conduct, security). |
+| 4.2.2                      | Added workflow permissions. |
 
 ---
 <a name="todos"></a>

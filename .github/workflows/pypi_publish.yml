@@ -5,6 +5,10 @@ on:
     branches:
       - master
 
+# Limit GITHUB_TOKEN permissions
+permissions:
+  contents: read
+
 jobs:
   build:
     environment: pypi-release
