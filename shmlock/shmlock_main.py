@@ -15,6 +15,10 @@ from multiprocessing import shared_memory
 from contextlib import contextmanager
 import logging
 from typing import Union, Optional
+import signal
+import weakref
+import atexit
+import gc
 
 __all__ = ["ShmLock",
            "remove_shm_from_resource_tracker",
@@ -29,6 +33,20 @@ from shmlock.shmlock_base_logger import ShmModuleBaseLogger, create_logger
 from shmlock.shmlock_uuid import ShmUuid
 from shmlock.shmlock_config import ShmLockConfig, ExitEventMock
 from shmlock.shmlock_warnings import ShmLockDanglingSharedMemoryWarning
+
+
+if os.name == "nt":
+    try:
+        import win32api # pylint: disable=import-error
+        import win32con # pylint: disable=import-error
+    except ImportError:
+        # prevents console handler on exit
+        win32api = None
+        win32con = None
+else:
+    # on posix systems we do not need to import win32api and win32con
+    win32api = None
+    win32con = None
 
 LOCK_SHM_SIZE = 16 # size of the shared memory block in bytes to store uuid
 
@@ -511,7 +529,7 @@ class ShmLock(ShmModuleBaseLogger):
             # failed type check
             pass
 
-        if force is False and getattr(self._shm, "counter", 0) > 0:
+        if (not force) and getattr(self._shm, "counter", 0) > 0:
             # for example if you try to release lock within context manager
             raise exceptions.ShmLockRuntimeError(f"lock {self} is still acquired by this "\
                 "thread via contextmanager or __enter__ call.")
@@ -662,3 +680,93 @@ class ShmLock(ShmModuleBaseLogger):
         finally:
             if shm is not None:
                 shm.close()
+
+    def add_exit_handlers(self,
+                          register_atexit: bool = True,
+                          register_signal: bool = True,
+                          register_weakref: bool = True,
+                          register_console_handler: bool = True,
+                          call_gc: bool = True):
+        """
+        Experimental and not recommended to use in production code!
+
+        add exit handlers to make sure lock is released if e.g. console is shut down or
+        process is terminated via ctrl+c or similar and lock is still acquired.
+
+        NOTE that there is still the possibility that the shared memory has been acquired but
+        the process is terminated before the shared memory object has been returned.
+
+        Parameters
+        ----------
+        register_atexit : bool, optional
+            register atexit handler to close the shared memory queue, by default True
+        register_signal : bool, optional
+            register signal handlers to clean up the shared memory queue, by default True
+            only for POSIX systems since it did not work as expected on Windows
+        register_weakref : bool, optional
+            register weakref handler to clean up the shared memory queue, by default True
+        register_console_handler : bool, optional
+            register console handler to clean up the shared memory queue, by default True
+            only for Windows systems
+        call_gc : bool, optional
+            call garbage collector to clean up the shared memory queue, by default True
+        """
+        if os.name == "posix" and register_signal:
+
+            # get potentially existing signal handlers
+            existing_handlers_sigint = signal.getsignal(signal.SIGINT)
+            existing_handlers_sigterm = signal.getsignal(signal.SIGTERM)
+            existing_handlers_sighup = signal.getsignal(signal.SIGHUP)
+
+            def clean_up(signum, frame):
+                """
+                cleanup function to close the shared memory queue
+                """
+                self.release(force=True)
+
+                # call existing handlers if they are callable
+                if callable(existing_handlers_sigint):
+                    existing_handlers_sigint(signum, frame)
+                if callable(existing_handlers_sigterm):
+                    existing_handlers_sigterm(signum, frame)
+                if callable(existing_handlers_sighup):
+                    existing_handlers_sighup(signum, frame)
+
+            # register signal handlers
+            signal.signal(signal.SIGINT, clean_up)
+            signal.signal(signal.SIGTERM, clean_up)
+            signal.signal(signal.SIGHUP, clean_up)
+
+
+        if os.name == "nt" and register_console_handler:
+            if win32api is not None and win32con is not None:
+                # only for windows systems which us necessary if a console is closed
+                def console_handler(ctrl_type):
+                    if ctrl_type in (win32con.CTRL_C_EVENT,
+                                    win32con.CTRL_CLOSE_EVENT,
+                                    win32con.CTRL_LOGOFF_EVENT,
+                                    win32con.CTRL_SHUTDOWN_EVENT,):
+                        self.release(force=True)
+                        return True  # Prevent immediate termination if possible
+                    return False  # Continue default behavior
+
+                win32api.SetConsoleCtrlHandler(console_handler, True)
+            else:
+                self.error("win32api or win32con is not available. "\
+                           "Cannot register console handler for lock %s. "\
+                           "Make sure you have the pywin32 package installed.",
+                           self)
+
+        if register_weakref:
+            # register weakref handler to clean up the shared memory
+            weakref.finalize(self, self.release, force=True)
+
+        if register_atexit:
+            # register atexit handler to close the shared memory queue
+            # usually this should not be necessary since the usage of signal and weakref, but
+            # safe is safe
+            atexit.register(self.release, force=True)
+
+        if call_gc:
+            # call garbage collector
+            gc.collect()

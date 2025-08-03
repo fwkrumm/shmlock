@@ -351,6 +351,11 @@ Please note that with Python version 3.13, there will be a "track" parameter for
 
 ### Process Interrupt (SIGINT/SIGTERM)
 
+In short: Do not do that, there is always the risk for dangling shared memory. Make sure to release the lock properly. If this is not possible test with `add_exit_handlers(...)` function; cf. the text below.
+
+
+TLDR;
+
 One potential issue arises if a process is terminated (such as through a `KeyboardInterrupt`) during the creation of shared memory (i.e., inside `shared_memory.SharedMemory(...)`). On Linux, this can lead to unintended outcomes, such as the shared memory mmap file being created with a size of zero or a shared memory block being allocated without an object reference being returned. In such cases, neither `close()` nor `unlink()` can be properly called.
 
 Since detecting this scenario is not trivial, the function `query_for_error_after_interrupt(...)` helps to handle such cases:
@@ -366,16 +371,17 @@ lock.query_for_error_after_interrupt()
 If the shared memory is in an inconsistent state (such as being created but lock does not hold reference) the function raises an exception. Otherwise, if everything is functioning correctly, it simply returns `None`. For further details, check the function's doc-string.
 
 
-In case you expect the process being terminated abruptly, you should assure the release via signal module:
+In case you expect the process being terminated abruptly, you can use the following function:
 
 ```python
 s = shmlock.ShmLock("lock_name")
 
-def cleanup(signum, frame):
-    s.release(force=True)
-    os._exit(0)
-
-signal.signal(signal.SIGTERM, cleanup) # and/or signal.SIGINT for KeyboardInterrupt
+# the following functions will (depending on parameters) register cleanup via atexit module (nt and posix), via signal module (for SIGINT, SIGTERM and SIGHUP; posix only), we weakref.finalize (nt and posix) and via win32api (console handler, nt only) and trigger garbage collection, respectively.
+s.add_exit_handlers(register_atexit = True,
+                    register_signal = True,
+                    register_weakref = True,
+                    register_console_handler = True,
+                    call_gc = True) # experimental
 ```
 
 However, please note that in some situations, you might not be able to recover from an interruption. One example on POSIX is when the shared memory mmap has been created at `/dev/shm/` but has not yet been filled—i.e., it has a size of zero—and the process is interrupted. In this case, you can neither create shared memory with that name (`FileExistsError`) nor attach to it (`ValueError`). The previously mentioned `query_for_error_after_interrupt(...)` will report this error; however, you will have to manually delete the mmap file at `/dev/shm/{lock_name}`.
@@ -407,7 +413,8 @@ To ensure safe cleanup, consider alternatives such as `atexit`, `signal.signal`,
 | 4.0.1                      | Fixed properties not being available before acquisition and implemented proper test methods. |
 | 4.0.2                      | Reworked version history. |
 | 4.1.0                      | Added a helper function to create a logger, added more tests and removed unnecessary space. |
-| 4.1.1                      | Fulfilled community standards. |
+| 4.2.0                      | Added function to automatically register exit handlers for process termination. |
+| 4.2.1                      | Fulfilled community standards. |
 
 ---
 <a name="todos"></a>
