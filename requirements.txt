@@ -3,7 +3,5 @@ pylint>3,<4
 filelock>3,<4
 pyzmq>26,<27
 coverage>7,<8
-# numpy >1 only for python 3.8
-numpy>1,<3
 # optional for color logs
 coloredlogs>15,<16

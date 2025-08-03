@@ -688,6 +688,8 @@ class ShmLock(ShmModuleBaseLogger):
                           register_console_handler: bool = True,
                           call_gc: bool = True):
         """
+        Experimental and not recommended to use in production code!
+
         add exit handlers to make sure lock is released if e.g. console is shut down or
         process is terminated via ctrl+c or similar and lock is still acquired.
 
