@@ -421,4 +421,4 @@ To ensure safe cleanup, consider alternatives such as `atexit`, `signal.signal`,
 <a id="todos"></a>
 ## ToDos
 
-- fulfill community standards; cf. https://github.com/fwkrumm/shmlock/community
+- TBD
