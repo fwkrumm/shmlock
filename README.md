@@ -416,6 +416,7 @@ To ensure safe cleanup, consider alternatives such as `atexit`, `signal.signal`,
 | 4.2.0                      | Added function to automatically register exit handlers for process termination. |
 | 4.2.1                      | Added community files (templates, code of conduct, security). |
 | 4.2.2                      | Added workflow permissions. |
+| 4.2.3                      | Moved pull request template to correct location in .github folder. |
 
 ---
 <a name="todos"></a>
