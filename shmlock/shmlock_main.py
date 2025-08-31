@@ -358,6 +358,9 @@ class ShmLock(ShmModuleBaseLogger):
         assert self._shm.shm is not None, "self._shm.shm is None without exception being raised. "\
             "This should not happen!"
 
+        # TODO: rmb(); make all reads are visible so that the successful acquirement assures
+        #  that potential memory operations are visible to this process
+
         return True
 
     def query_for_error_after_interrupt(self, number_of_checks: int = 3):
@@ -515,6 +518,11 @@ class ShmLock(ShmModuleBaseLogger):
         RuntimeError
             if the lock could not be released properly
         """
+
+        # TODO: wmb(); make all write visible before release. This might not be
+        # necessary on all architectures, but it's a good practice to ensure
+        # that all writes are visible to other processes before releasing the
+        # lock.
 
         try:
             if self._config.pid != os.getpid():
