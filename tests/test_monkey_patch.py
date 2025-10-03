@@ -20,11 +20,24 @@ class MonkeyPatchTest(unittest.TestCase):
 
     def test_remove_shm_invalid_pattern_type(self) -> None:
         """Test remove_shm_from_resource_tracker with invalid pattern type."""
-        with self.assertRaises(ValueError):
-            remove_shm_from_resource_tracker(123)  # type: ignore
+        if sys.version_info >= (3, 13):
+            # On Python 3.13+, the function raises RuntimeError before parameter validation
+            with self.assertRaises(RuntimeError) as context:
+                remove_shm_from_resource_tracker(123)  # type: ignore
+            self.assertIn("track", str(context.exception))
+            self.assertIn("3.13", str(context.exception))
 
-        with self.assertRaises(ValueError):
-            remove_shm_from_resource_tracker(None)  # type: ignore
+            with self.assertRaises(RuntimeError) as context:
+                remove_shm_from_resource_tracker(None)  # type: ignore
+            self.assertIn("track", str(context.exception))
+            self.assertIn("3.13", str(context.exception))
+        else:
+            # On Python < 3.13, parameter validation should catch invalid types
+            with self.assertRaises(ValueError):
+                remove_shm_from_resource_tracker(123)  # type: ignore
+
+            with self.assertRaises(ValueError):
+                remove_shm_from_resource_tracker(None)  # type: ignore
 
     @patch("shmlock.shmlock_monkey_patch.sys.version_info", (3, 13, 0))
     def test_remove_shm_python_313_error(self) -> None:
