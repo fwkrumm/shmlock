@@ -1,6 +1,7 @@
 """
 init tests of shmlock package
 """
+
 import multiprocessing
 import threading
 from multiprocessing import shared_memory
@@ -10,6 +11,7 @@ import unittest
 import shmlock
 import shmlock.shmlock_exceptions
 import shmlock.shmlock_config
+
 
 class InitTest(unittest.TestCase):
     """
@@ -38,7 +40,9 @@ class InitTest(unittest.TestCase):
         # internally should be a float
         self.assertTrue(isinstance(lock.poll_interval, float))
         # exit event should be automatically assigned
-        self.assertTrue(isinstance(lock.get_exit_event(), shmlock.shmlock_config.ExitEventMock))
+        self.assertTrue(
+            isinstance(lock.get_exit_event(), shmlock.shmlock_config.ExitEventMock)
+        )
 
         del lock
         # shared memory should be deleted thus attaching should fail
@@ -70,11 +74,16 @@ class InitTest(unittest.TestCase):
         """
         shm_name = str(time.time())
 
-        for event in (multiprocessing.Event(), threading.Event(),):
+        for event in (
+            multiprocessing.Event(),
+            threading.Event(),
+        ):
             lock = shmlock.ShmLock(shm_name, exit_event=event)
             self.assertTrue(isinstance(lock.get_exit_event(), type(event)))
             lock.use_mock_exit_event()
-            self.assertTrue(isinstance(lock.get_exit_event(), shmlock.shmlock_config.ExitEventMock))
+            self.assertTrue(
+                isinstance(lock.get_exit_event(), shmlock.shmlock_config.ExitEventMock)
+            )
 
     def test_shm_config_init(self):
         """
@@ -90,7 +99,7 @@ class InitTest(unittest.TestCase):
             timeout=1.0,
             uuid=uuid,
             pid=1,
-            description="description"
+            description="description",
         )
         self.assertEqual(config.name, "test")
         self.assertEqual(config.poll_interval, 1.0)
@@ -100,7 +109,6 @@ class InitTest(unittest.TestCase):
         self.assertEqual(config.uuid, uuid)
         self.assertEqual(config.pid, 1)
         self.assertEqual(config.description, "description")
-
 
     def test_wrong_parameter_types(self):
         """
@@ -149,7 +157,9 @@ class InitTest(unittest.TestCase):
         with self.assertRaises(shmlock.shmlock_exceptions.ShmLockValueError):
             shmlock.ShmLock("")
 
-    @unittest.skipUnless(sys.version_info < (3, 13), "test only for lower python versions")
+    @unittest.skipUnless(
+        sys.version_info < (3, 13), "test only for lower python versions"
+    )
     def test_track_for_too_low_version(self):
         shm_name = str(time.time())
         # this is not a valid test since the version is too low
@@ -160,6 +170,7 @@ class InitTest(unittest.TestCase):
             # should work fine
             l = shmlock.ShmLock(shm_name, track=False)
             self.assertTrue(l.acquire())
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

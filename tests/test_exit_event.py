@@ -1,6 +1,7 @@
 """
 tests whether the exit event is working as intended
 """
+
 import unittest
 import time
 import threading
@@ -36,8 +37,11 @@ class ExitEventTest(unittest.TestCase):
         set up class method
         """
         obj = shmlock.ShmLock(LOCK_NAME)
-        cls().assertTrue(obj.acquire(timeout=1), "lock could not be acquired initially i.e. "\
-            "it is locked by another process. Tests cannot run.")
+        cls().assertTrue(
+            obj.acquire(timeout=1),
+            "lock could not be acquired initially i.e. "
+            "it is locked by another process. Tests cannot run.",
+        )
 
     # @unittest.skip("skip for now")
     def test_set_exit_event(self):
@@ -48,7 +52,9 @@ class ExitEventTest(unittest.TestCase):
         exit_event = multiprocessing.Event()
         lock = shmlock.ShmLock(LOCK_NAME, exit_event=exit_event)
         exit_event.set()
-        self.assertFalse(lock.acquire(), "lock could be acquired although exit event is set")
+        self.assertFalse(
+            lock.acquire(), "lock could be acquired although exit event is set"
+        )
 
     def test_set_exit_event_with_thread(self):
         """
@@ -56,19 +62,20 @@ class ExitEventTest(unittest.TestCase):
         """
         log.info("Running set_exit_event_with_thread")
         exit_event = multiprocessing.Event()
+
         def worker():
             lock = shmlock.ShmLock(LOCK_NAME, exit_event=exit_event)
             lock_ = shmlock.ShmLock(LOCK_NAME)
             self.assertTrue(lock_.acquire())
-            self.assertFalse(lock.acquire()) # exit event will be set in and thus
-                # acquirement will be stopped. otherwise this would wait forever
-                # (because of default timeout=None)
+            self.assertFalse(lock.acquire())  # exit event will be set in and thus
+            # acquirement will be stopped. otherwise this would wait forever
+            # (because of default timeout=None)
 
         thread = threading.Thread(target=worker, daemon=True)
         thread.start()
         time.sleep(1)
-        exit_event.set() # let thread die
-        thread.join(timeout=2) # give thread some time to finish
+        exit_event.set()  # let thread die
+        thread.join(timeout=2)  # give thread some time to finish
         self.assertFalse(thread.is_alive(), "thread is still alive")
 
 

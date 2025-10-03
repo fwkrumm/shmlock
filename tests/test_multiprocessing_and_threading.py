@@ -10,6 +10,7 @@ https://github.com/vllm-project/vllm/issues/5468
 https://github.com/vllm-project/vllm/pull/5512
 
 """
+
 import multiprocessing
 from multiprocessing import shared_memory
 import multiprocessing.synchronize
@@ -40,10 +41,13 @@ if os.name == "posix":
         # so we set it to spawn here
         try:
             multiprocessing.set_start_method("spawn", force=True)
-            log_buffer.get("info").\
-                append("Setting method to spawn. Because of deprecation warning.")
+            log_buffer.get("info").append(
+                "Setting method to spawn. Because of deprecation warning."
+            )
         except RuntimeError as exc:
-            log_buffer.get("error").append(f"Could not set start method to spawn: {exc}")
+            log_buffer.get("error").append(
+                f"Could not set start method to spawn: {exc}"
+            )
 
     # otherwise it spams KeyErrors since resource tracker also tracks shm of other processes
     # and complains that it has not been unlinked because it was unlinked by another process
@@ -51,11 +55,16 @@ if os.name == "posix":
         # NOTE that this is not necessary for python 3.13 and above since there is the track
         # parameter to deactivate tracking
         shmlock.remove_shm_from_resource_tracker("shm_lock")
-        log_buffer.get("info").append("Removed shared memory from resource tracker.\n\n")
+        log_buffer.get("info").append(
+            "Removed shared memory from resource tracker.\n\n"
+        )
 else:
-    log_buffer.get("info").append("Not removing shared memory from resource tracker\n\n")
+    log_buffer.get("info").append(
+        "Not removing shared memory from resource tracker\n\n"
+    )
 
-class ArgumentsCollector: # pylint: disable=too-few-public-methods
+
+class ArgumentsCollector:  # pylint: disable=too-few-public-methods
     """
     just a little helper class to collect arguments for multiprocessing tests
     """
@@ -91,21 +100,25 @@ def worker(arg_collector: ArgumentsCollector):
         all necessary arguments for the worker function
     """
 
-    start_event : multiprocessing.synchronize.Event = arg_collector.start_event
-    use_lock_function : bool = arg_collector.use_lock_function
-    timeout : float = arg_collector.timeout
-    failed_acquire_queue : multiprocessing.Queue = arg_collector.failed_acquire_queue
-    poll_interval : float = arg_collector.poll_interval
-    time_measure_queue : multiprocessing.Queue = arg_collector.time_measure_queue
+    start_event: multiprocessing.synchronize.Event = arg_collector.start_event
+    use_lock_function: bool = arg_collector.use_lock_function
+    timeout: float = arg_collector.timeout
+    failed_acquire_queue: multiprocessing.Queue = arg_collector.failed_acquire_queue
+    poll_interval: float = arg_collector.poll_interval
+    time_measure_queue: multiprocessing.Queue = arg_collector.time_measure_queue
 
-    start_event.wait() # to synchronize start of all processes
+    start_event.wait()  # to synchronize start of all processes
     shm = shared_memory.SharedMemory(name=RESULT_SHM_NAME)
     if poll_interval is not None:
-        obj = shmlock.ShmLock(LOCK_NAME,
-                              poll_interval=poll_interval,
-                              track=False if sys.version_info >= (3, 13) else None)
+        obj = shmlock.ShmLock(
+            LOCK_NAME,
+            poll_interval=poll_interval,
+            track=False if sys.version_info >= (3, 13) else None,
+        )
     else:
-        obj = shmlock.ShmLock(LOCK_NAME, track=False if sys.version_info >= (3, 13) else None)
+        obj = shmlock.ShmLock(
+            LOCK_NAME, track=False if sys.version_info >= (3, 13) else None
+        )
 
     time_measurement = []
     failed_acquirements = 0
@@ -119,14 +132,14 @@ def worker(arg_collector: ArgumentsCollector):
                     current_value = struct.unpack_from("Q", shm.buf, 0)[0]
                     struct.pack_into("q", shm.buf, 0, current_value + 1)
                 else:
-                    failed_acquirements+=1
+                    failed_acquirements += 1
         else:
             with obj(timeout=timeout) as res:
                 if res:
                     current_value = struct.unpack_from("Q", shm.buf, 0)[0]
                     struct.pack_into("q", shm.buf, 0, current_value + 1)
                 else:
-                    failed_acquirements+=1
+                    failed_acquirements += 1
         end_time = time.perf_counter()
         time_measurement.append(end_time - start_time)
 
@@ -139,6 +152,7 @@ def worker(arg_collector: ArgumentsCollector):
     del obj
     shm.close()
     del shm
+
 
 class FunctionalTest(unittest.TestCase):
     """
@@ -169,9 +183,14 @@ class FunctionalTest(unittest.TestCase):
         """
         set up class method
         """
-        obj = shmlock.ShmLock(LOCK_NAME, track=False if sys.version_info >= (3, 13) else None)
-        cls().assertTrue(obj.acquire(timeout=1), "lock could not be acquired initially i.e. "\
-            "it is locked by another process. Tests cannot run.")
+        obj = shmlock.ShmLock(
+            LOCK_NAME, track=False if sys.version_info >= (3, 13) else None
+        )
+        cls().assertTrue(
+            obj.acquire(timeout=1),
+            "lock could not be acquired initially i.e. "
+            "it is locked by another process. Tests cannot run.",
+        )
 
     def tearDown(self):
         """
@@ -196,7 +215,9 @@ class FunctionalTest(unittest.TestCase):
         set up i.e. create result shared memory for testing
         """
         try:
-            self.result_shm = shared_memory.SharedMemory(name=RESULT_SHM_NAME, create=True, size=8)
+            self.result_shm = shared_memory.SharedMemory(
+                name=RESULT_SHM_NAME, create=True, size=8
+            )
         except FileExistsError:
             # might happen if you did not clean up properly
             self.result_shm = shared_memory.SharedMemory(name=RESULT_SHM_NAME)
@@ -284,8 +305,10 @@ class FunctionalTest(unittest.TestCase):
         make sure that this test_* is alphabetically the first one
         """
         if len(log_buffer) > 0:
-            log.info(">> This ''test'' is only for logging uniquely despite process spawning. "\
-                "The content logged here holds true for ALL test cases. Log buffer content:\n")
+            log.info(
+                ">> This ''test'' is only for logging uniquely despite process spawning. "
+                "The content logged here holds true for ALL test cases. Log buffer content:\n"
+            )
             for key, value in log_buffer.items():
                 # log according to key
                 for val in value:
@@ -305,21 +328,23 @@ class FunctionalTest(unittest.TestCase):
 
         for _ in range(NUM_PROCESSES):
             if self.use_processes:
-                processes : list[multiprocessing.Process]
-                processes.append(multiprocessing.Process(target=worker,
-                                                         args=(self.args,),
-                                                         daemon=True))
+                processes: list[multiprocessing.Process]
+                processes.append(
+                    multiprocessing.Process(
+                        target=worker, args=(self.args,), daemon=True
+                    )
+                )
             else:
                 processes: list[threading.Thread]
-                processes.append(threading.Thread(target=worker,
-                                                  args=(self.args,),
-                                                  daemon=True))
+                processes.append(
+                    threading.Thread(target=worker, args=(self.args,), daemon=True)
+                )
 
         for process in processes:
             process.start()
 
-        time.sleep(1) # wait a little bit to make sure all processes are started
-        start_event.set() # make sure everything starts at the same time
+        time.sleep(1)  # wait a little bit to make sure all processes are started
+        start_event.set()  # make sure everything starts at the same time
 
         not_acquired = 0
 
@@ -328,17 +353,21 @@ class FunctionalTest(unittest.TestCase):
             not_acquired += self.failure_count_queue.get()
 
         if self.args.timeout is None or self.args.timeout == 0:
-            self.assertEqual(not_acquired, 0,
-                             "timeout is None but lock could not be acquired. "\
-                             "this should not happen!")
+            self.assertEqual(
+                not_acquired,
+                0,
+                "timeout is None but lock could not be acquired. "
+                "this should not happen!",
+            )
 
         if not_acquired > 0:
             # should happen for tests with (small) timeout
-            log.info("not acquired (approx): %s/%s for this specific test case which makes %s%%.",
-                     not_acquired,
-                     NUM_PROCESSES * NUM_RUNS,
-                     not_acquired/(NUM_PROCESSES * NUM_RUNS) * 100)
-
+            log.info(
+                "not acquired (approx): %s/%s for this specific test case which makes %s%%.",
+                not_acquired,
+                NUM_PROCESSES * NUM_RUNS,
+                not_acquired / (NUM_PROCESSES * NUM_RUNS) * 100,
+            )
 
         time_measures = []
         # NOTE that this blocks until all processes have finished
@@ -352,12 +381,16 @@ class FunctionalTest(unittest.TestCase):
             # "Joining processes that use queues"
             process.join()
 
-        log.info("Average time per run (lock/write/release): %s ms",
-                 sum(time_measures) / len(time_measures) * 1000)
+        log.info(
+            "Average time per run (lock/write/release): %s ms",
+            sum(time_measures) / len(time_measures) * 1000,
+        )
 
         # check if each process incremented exactly one time per run
-        self.assertEqual(struct.unpack_from("Q", self.result_shm.buf, 0)[0],
-                         NUM_PROCESSES * NUM_RUNS - not_acquired)
+        self.assertEqual(
+            struct.unpack_from("Q", self.result_shm.buf, 0)[0],
+            NUM_PROCESSES * NUM_RUNS - not_acquired,
+        )
 
         # check that lock shared memory is released at the end
         with self.assertRaises(FileNotFoundError):

@@ -4,6 +4,7 @@ Configuration dataclass for the shared memory lock.
 This module provides configuration management and mock classes
 for the shared memory lock implementation.
 """
+
 import time
 import multiprocessing
 import multiprocessing.synchronize
@@ -17,7 +18,7 @@ from shmlock.shmlock_uuid import ShmUuid
 class ExitEventMock:
     """
     Mock class for exit event when not desired by user.
-    
+
     Note that this is not thread-safe or process-safe and should only be used
     if the user does not want to use any threading or multiprocessing events
     as exit event. The wait will simply be a sleep for given timeout.
@@ -30,7 +31,7 @@ class ExitEventMock:
     def is_set(self) -> bool:
         """
         Mock is_set function to resemble Event.is_set().
-        
+
         This function returns True if the exit event is set, otherwise False.
 
         Returns
@@ -51,7 +52,7 @@ class ExitEventMock:
     def wait(self, sleep_time: float) -> None:
         """
         Mock wait function to resemble Event().
-        
+
         Note however that this does not react on .set() or .clear() calls
         and will simply sleep for the given sleep time.
 
@@ -92,6 +93,7 @@ class ShmLockConfig:  # pylint: disable=(too-many-instance-attributes)
     description : str
         Custom description of the lock which can be set as property setter
     """
+
     name: str
     poll_interval: float
     exit_event: Union[multiprocessing.synchronize.Event, threading.Event, ExitEventMock]
@@ -104,7 +106,7 @@ class ShmLockConfig:  # pylint: disable=(too-many-instance-attributes)
     def __post_init__(self) -> None:
         """
         Validate configuration parameters after initialization.
-        
+
         Raises
         ------
         ValueError
@@ -112,12 +114,14 @@ class ShmLockConfig:  # pylint: disable=(too-many-instance-attributes)
         """
         if not isinstance(self.name, str) or not self.name:
             raise ValueError("name must be a non-empty string")
-        
+
         if not isinstance(self.poll_interval, (int, float)) or self.poll_interval <= 0:
             raise ValueError("poll_interval must be a positive number")
-        
-        if self.timeout is not None and (not isinstance(self.timeout, (int, float)) or self.timeout < 0):
+
+        if self.timeout is not None and (
+            not isinstance(self.timeout, (int, float)) or self.timeout < 0
+        ):
             raise ValueError("timeout must be a non-negative number or None")
-        
+
         if not isinstance(self.pid, int) or self.pid <= 0:
             raise ValueError("pid must be a positive integer")

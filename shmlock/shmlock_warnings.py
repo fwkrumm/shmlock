@@ -11,7 +11,7 @@ import warnings
 class ShmLockDanglingSharedMemoryWarning(ResourceWarning):
     """
     Warning for potentially dangling shared memory blocks.
-    
+
     This warning is issued when shared memory blocks might be left in an
     inconsistent state due to process interruption, typically from KeyboardInterrupt.
     """

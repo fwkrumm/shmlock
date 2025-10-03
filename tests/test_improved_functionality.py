@@ -4,6 +4,7 @@ Tests for improved functionality and edge cases in shmlock package.
 This module contains tests for recently added functionality, edge cases,
 and improved error handling in the shmlock package.
 """
+
 import unittest
 import time
 import logging
@@ -58,7 +59,7 @@ class ImprovedFunctionalityTest(unittest.TestCase):
             track=None,
             timeout=1.0,
             uuid=uuid_obj,
-            pid=12345
+            pid=12345,
         )
         self.assertEqual(config.name, "test_lock")
 
@@ -71,7 +72,7 @@ class ImprovedFunctionalityTest(unittest.TestCase):
                 track=None,
                 timeout=1.0,
                 uuid=uuid_obj,
-                pid=12345
+                pid=12345,
             )
 
         # Test invalid poll_interval (negative)
@@ -83,7 +84,7 @@ class ImprovedFunctionalityTest(unittest.TestCase):
                 track=None,
                 timeout=1.0,
                 uuid=uuid_obj,
-                pid=12345
+                pid=12345,
             )
 
         # Test invalid timeout (negative)
@@ -95,7 +96,7 @@ class ImprovedFunctionalityTest(unittest.TestCase):
                 track=None,
                 timeout=-1.0,
                 uuid=uuid_obj,
-                pid=12345
+                pid=12345,
             )
 
         # Test invalid pid (zero)
@@ -107,22 +108,22 @@ class ImprovedFunctionalityTest(unittest.TestCase):
                 track=None,
                 timeout=1.0,
                 uuid=uuid_obj,
-                pid=0
+                pid=0,
             )
 
     def test_shmUuid_equality_and_hash(self) -> None:
         """Test ShmUuid equality and hash functionality."""
         uuid1 = ShmUuid()
         uuid2 = ShmUuid()
-        
+
         # Different UUIDs should not be equal
         self.assertNotEqual(uuid1, uuid2)
         self.assertNotEqual(hash(uuid1), hash(uuid2))
-        
+
         # Same UUID should be equal to itself
         self.assertEqual(uuid1, uuid1)
         self.assertEqual(hash(uuid1), hash(uuid1))
-        
+
         # Test equality with non-ShmUuid objects
         self.assertNotEqual(uuid1, "not_a_uuid")
         self.assertNotEqual(uuid1, 42)
@@ -132,38 +133,38 @@ class ImprovedFunctionalityTest(unittest.TestCase):
         # Test invalid byte representation
         with self.assertRaises(ValueError):
             ShmUuid.byte_to_string(b"invalid_bytes")
-        
+
         with self.assertRaises(ValueError):
             ShmUuid.byte_to_string(b"")
-        
+
         # Test invalid string representation
         with self.assertRaises(ValueError):
             ShmUuid.string_to_bytes("not_a_uuid")
-        
+
         with self.assertRaises(ValueError):
             ShmUuid.string_to_bytes("")
 
     def test_exit_event_mock_functionality(self) -> None:
         """Test ExitEventMock behavior."""
         mock_event = ExitEventMock()
-        
+
         # Initial state should be False
         self.assertFalse(mock_event.is_set())
-        
+
         # Test set functionality
         mock_event.set()
         self.assertTrue(mock_event.is_set())
-        
+
         # Test clear functionality
         mock_event.clear()
         self.assertFalse(mock_event.is_set())
-        
+
         # Test wait functionality
         start_time = time.time()
         mock_event.wait(0.1)
         elapsed = time.time() - start_time
         self.assertGreaterEqual(elapsed, 0.09)  # Allow for timing variance
-        
+
         # Test wait when set (should not sleep)
         mock_event.set()
         start_time = time.time()
@@ -176,14 +177,14 @@ class ImprovedFunctionalityTest(unittest.TestCase):
         # Test with invalid logger type
         with self.assertRaises(exceptions.ShmLockValueError):
             ShmModuleBaseLogger(logger="not_a_logger")
-        
+
         with self.assertRaises(exceptions.ShmLockValueError):
             ShmModuleBaseLogger(logger=42)
 
     def test_base_logger_without_logger(self) -> None:
         """Test ShmModuleBaseLogger without actual logger."""
         base_logger = ShmModuleBaseLogger()
-        
+
         # All logging methods should work without error when no logger is set
         base_logger.info("test info")
         base_logger.debug("test debug")
@@ -197,7 +198,7 @@ class ImprovedFunctionalityTest(unittest.TestCase):
         # Test invalid logging levels
         with self.assertRaises(ValueError):
             create_logger(level=-1)
-        
+
         with self.assertRaises(ValueError):
             create_logger(level_file=-1)
 
@@ -206,17 +207,17 @@ class ImprovedFunctionalityTest(unittest.TestCase):
         # Test with invalid file path (should warn but not crash)
         with tempfile.TemporaryDirectory() as temp_dir:
             invalid_path = os.path.join(temp_dir, "nonexistent", "file.log")
-            
+
             # This should create a logger but log a warning about file creation failure
             logger = create_logger(file_path=invalid_path)
             self.assertIsInstance(logger, logging.Logger)
 
-    @patch('shmlock.shmlock_base_logger.coloredlogs')
+    @patch("shmlock.shmlock_base_logger.coloredlogs")
     def test_create_logger_coloredlogs_error(self, mock_coloredlogs: MagicMock) -> None:
         """Test create_logger when coloredlogs installation fails."""
         # Mock coloredlogs.install to raise an exception
         mock_coloredlogs.install.side_effect = Exception("Mock installation error")
-        
+
         # Should still create logger successfully
         logger = create_logger(use_colored_logs=True)
         self.assertIsInstance(logger, logging.Logger)
@@ -226,11 +227,11 @@ class ImprovedFunctionalityTest(unittest.TestCase):
         # Test empty string
         with self.assertRaises(exceptions.ShmLockValueError):
             shmlock.ShmLock("")
-        
+
         # Test non-string types
         with self.assertRaises(exceptions.ShmLockValueError):
             shmlock.ShmLock(None)
-        
+
         with self.assertRaises(exceptions.ShmLockValueError):
             shmlock.ShmLock(123)
 
@@ -239,11 +240,11 @@ class ImprovedFunctionalityTest(unittest.TestCase):
         # Test negative values
         with self.assertRaises(exceptions.ShmLockValueError):
             shmlock.ShmLock(self.test_name, poll_interval=-0.1)
-        
+
         # Test zero
         with self.assertRaises(exceptions.ShmLockValueError):
             shmlock.ShmLock(self.test_name, poll_interval=0)
-        
+
         # Test invalid types
         with self.assertRaises(exceptions.ShmLockValueError):
             shmlock.ShmLock(self.test_name, poll_interval="invalid")
@@ -251,40 +252,40 @@ class ImprovedFunctionalityTest(unittest.TestCase):
     def test_lock_representation(self) -> None:
         """Test lock string representation methods."""
         lock = shmlock.ShmLock(self.test_name)
-        
+
         # Test __repr__
         repr_str = repr(lock)
         self.assertIn(self.test_name, repr_str)
         self.assertIn("ShmLock", repr_str)
-        
+
         # Test that UUID is included
         self.assertIn("uuid=", repr_str)
 
     def test_timeout_parameter_types(self) -> None:
         """Test different timeout parameter types."""
         lock = shmlock.ShmLock(self.test_name)
-        
+
         try:
             # Test None timeout (should work)
             result = lock.acquire(timeout=None)
             if result:
                 lock.release()
-            
+
             # Test False timeout (should work - single attempt)
             result = lock.acquire(timeout=False)
             if result:
                 lock.release()
-            
+
             # Test True timeout (should work - 1 second)
             result = lock.acquire(timeout=True)
             if result:
                 lock.release()
-            
+
             # Test float timeout
             result = lock.acquire(timeout=0.1)
             if result:
                 lock.release()
-                
+
         except Exception as e:
             self.fail(f"Timeout parameter handling failed: {e}")
 
@@ -293,6 +294,7 @@ class ImprovedFunctionalityTest(unittest.TestCase):
         # Try to clean up any remaining shared memory
         try:
             from multiprocessing import shared_memory
+
             shm = shared_memory.SharedMemory(name=self.test_name)
             shm.close()
             shm.unlink()
@@ -302,5 +304,5 @@ class ImprovedFunctionalityTest(unittest.TestCase):
             pass  # Ignore other cleanup errors
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

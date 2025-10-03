@@ -4,14 +4,14 @@ UUID class for shared memory lock.
 This module provides UUID generation and manipulation functionality
 for unique identification of shared memory locks.
 """
+
 import uuid
-from typing import Union
 
 
 class ShmUuid:
     """
     Data class to store and manage the UUID of the lock.
-    
+
     This class encapsulates UUID generation and provides convenient
     access to both byte and string representations of the UUID.
     """
@@ -27,7 +27,7 @@ class ShmUuid:
     def __repr__(self) -> str:
         """
         Return a string representation of the ShmUuid instance.
-        
+
         Returns
         -------
         str
@@ -49,12 +49,12 @@ class ShmUuid:
     def __eq__(self, other: object) -> bool:
         """
         Check equality with another ShmUuid instance.
-        
+
         Parameters
         ----------
         other : object
             Object to compare with
-            
+
         Returns
         -------
         bool
@@ -67,7 +67,7 @@ class ShmUuid:
     def __hash__(self) -> int:
         """
         Return hash of the UUID for use in sets/dicts.
-        
+
         Returns
         -------
         int
@@ -89,7 +89,7 @@ class ShmUuid:
         -------
         str
             String representation of UUID
-            
+
         Raises
         ------
         ValueError
@@ -114,7 +114,7 @@ class ShmUuid:
         -------
         bytes
             Byte representation of UUID
-            
+
         Raises
         ------
         ValueError

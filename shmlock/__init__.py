@@ -34,12 +34,7 @@ from shmlock.shmlock_base_logger import create_logger
 import shmlock.shmlock_exceptions as exceptions
 
 # Export main components
-__all__ = [
-    "ShmLock",
-    "remove_shm_from_resource_tracker", 
-    "exceptions",
-    "create_logger"
-]
+__all__ = ["ShmLock", "remove_shm_from_resource_tracker", "exceptions", "create_logger"]
 
 # Do NOT alter the following line in any way EXCEPT changing
 # the version number. No comments, no rename, whatsoever

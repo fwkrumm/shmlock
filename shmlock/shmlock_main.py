@@ -4,6 +4,7 @@ Main class of shared memory lock.
 If possible never terminate this process using ctrl+c or similar. This can lead to dangling
 shared memory blocks. Best practice is to use the exit event to stop the lock from acquirement.
 """
+
 import os
 import time
 import sys
@@ -14,18 +15,13 @@ import multiprocessing.synchronize
 from multiprocessing import shared_memory
 from contextlib import contextmanager
 import logging
-from typing import Union, Optional, Iterator, Any
+from typing import Union, Optional, Iterator
 import signal
 import weakref
 import atexit
 import gc
 
-__all__ = [
-    "ShmLock",
-    "remove_shm_from_resource_tracker",
-    "exceptions", 
-    "create_logger"
-]
+__all__ = ["ShmLock", "remove_shm_from_resource_tracker", "exceptions", "create_logger"]
 
 # Import functions for resource tracking adjustments
 import shmlock.shmlock_exceptions as exceptions
@@ -58,19 +54,19 @@ class ShmLock(ShmModuleBaseLogger):
 
     NOTE that the lock is reentrant, i.e. the same lock object can be acquired multiple times
     by the same thread.
-    
+
     Examples
     --------
     Basic usage with context manager:
-    
+
     >>> lock = ShmLock("my_lock")
     >>> with lock.lock(timeout=1.0) as acquired:
     ...     if acquired:
     ...         # Critical section
     ...         pass
-    
+
     Usage with callable syntax:
-    
+
     >>> with lock(timeout=1.0) as acquired:
     ...     if acquired:
     ...         # Critical section
@@ -82,12 +78,14 @@ class ShmLock(ShmModuleBaseLogger):
         lock_name: str,
         poll_interval: Union[float, int] = 0.05,
         logger: Optional[logging.Logger] = None,
-        exit_event: Optional[Union[multiprocessing.synchronize.Event, threading.Event]] = None,
-        track: Optional[bool] = None
+        exit_event: Optional[
+            Union[multiprocessing.synchronize.Event, threading.Event]
+        ] = None,
+        track: Optional[bool] = None,
     ) -> None:
         """
         Initialize shared memory lock.
-        
+
         Set shared memory name (for lock) and poll_interval.
         The latter is used to check if lock is available every poll_interval seconds.
 
@@ -109,7 +107,7 @@ class ShmLock(ShmModuleBaseLogger):
             Set to False if you do want the shared memory block been tracked.
             This parameter is only supported for Python >= 3.13 in SharedMemory
             class, by default None
-            
+
         Raises
         ------
         exceptions.ShmLockValueError
@@ -118,16 +116,21 @@ class ShmLock(ShmModuleBaseLogger):
         ValueError
             If track parameter is set but Python version is < 3.13
         """
-        self._shm = threading.local()  # Will contain shared memory reference and counter
+        self._shm = (
+            threading.local()
+        )  # Will contain shared memory reference and counter
         super().__init__(logger=logger)
 
         # Type checks
         if (not isinstance(poll_interval, (float, int))) or poll_interval <= 0:
-            raise exceptions.ShmLockValueError("poll_interval must be a float or int and > 0")
+            raise exceptions.ShmLockValueError(
+                "poll_interval must be a float or int and > 0"
+            )
         if not isinstance(lock_name, str):
             raise exceptions.ShmLockValueError("lock_name must be a string")
-        if exit_event and \
-            not isinstance(exit_event, (multiprocessing.synchronize.Event, threading.Event)):
+        if exit_event and not isinstance(
+            exit_event, (multiprocessing.synchronize.Event, threading.Event)
+        ):
             raise exceptions.ShmLockValueError(
                 "exit_event must be a multiprocessing.Event or threading.Event"
             )
@@ -143,7 +146,7 @@ class ShmLock(ShmModuleBaseLogger):
             exit_event=exit_event if exit_event is not None else ExitEventMock(),
             track=None,
             uuid=ShmUuid(),
-            pid=os.getpid()
+            pid=os.getpid(),
         )
 
         if track is not None:
@@ -196,7 +199,7 @@ class ShmLock(ShmModuleBaseLogger):
                 self._shm.counter = getattr(self._shm, "counter", 0) + 1
                 self.debug(
                     "lock acquired via contextmanager incremented thread ref counter to %d",
-                    self._shm.counter
+                    self._shm.counter,
                 )
                 yield True
                 return
@@ -206,15 +209,12 @@ class ShmLock(ShmModuleBaseLogger):
             # (for whatever reason) call release() multiple times without acquiring the lock
             self._shm.counter = max(getattr(self._shm, "counter", 1) - 1, 0)
             self.debug(
-                "lock %s decremented thread ref counter to %d",
-                self,
-                self._shm.counter
+                "lock %s decremented thread ref counter to %d", self, self._shm.counter
             )
             if self._shm.counter == 0:
                 # Release the lock if counter is 0
                 self.release()
         yield False
-
 
     def __enter__(self):
         """
@@ -228,8 +228,10 @@ class ShmLock(ShmModuleBaseLogger):
         # acquire the lock
         if self.acquire(timeout=self._config.timeout):
             self._shm.counter = getattr(self._shm, "counter", 0) + 1
-            self.debug("lock acquired via __enter__ incremented thread ref counter to %d",
-                       self._shm.counter)
+            self.debug(
+                "lock acquired via __enter__ incremented thread ref counter to %d",
+                self._shm.counter,
+            )
             return True
         return False
 
@@ -264,9 +266,9 @@ class ShmLock(ShmModuleBaseLogger):
             ...
         """
         self._shm.counter = max(getattr(self._shm, "counter", 1) - 1, 0)
-        self.debug("lock %s decremented thread ref counter to %d",
-                self,
-                self._shm.counter)
+        self.debug(
+            "lock %s decremented thread ref counter to %d", self, self._shm.counter
+        )
         if self._shm.counter == 0:
             self.release()
 
@@ -294,25 +296,27 @@ class ShmLock(ShmModuleBaseLogger):
         """
 
         if self._config.pid != os.getpid():
-            raise exceptions.ShmLockRuntimeError(f"lock {self} has been created in another "\
-                                                 "process and cannot be used in this process. "\
-                                                 "Do not shared locks among processes!")
+            raise exceptions.ShmLockRuntimeError(
+                f"lock {self} has been created in another "
+                "process and cannot be used in this process. "
+                "Do not shared locks among processes!"
+            )
 
         start_time = time.perf_counter()
         try:
-            while (not self._config.exit_event.is_set()) and \
-                (not timeout or time.perf_counter() - start_time < timeout):
+            while (not self._config.exit_event.is_set()) and (
+                not timeout or time.perf_counter() - start_time < timeout
+            ):
                 # enter loop if exit event is not set and either no timeout is set (0/False) or
                 # the passed time of trying to acquire the lock is smaller than the timeout
                 # None means infinite wait
                 try:
-                    return self._create_or_fail() # returns True or raises exception
+                    return self._create_or_fail()  # returns True or raises exception
                 except FileExistsError:
                     # shared memory block already exists, i.e. the lock is already acquired
-                    self.debug("could not acquire lock %s; "\
-                            "timeout[s] is %s",
-                            self,
-                            timeout)
+                    self.debug(
+                        "could not acquire lock %s; timeout[s] is %s", self, timeout
+                    )
                     if timeout is False:
                         # if timeout is explicitly False
                         #   -> break loop and return False since acquirement failed
@@ -324,14 +328,16 @@ class ShmLock(ShmModuleBaseLogger):
                     # dangling shared memory block. This is only the case if the process is
                     # interrupted somewhere within the shared memory creation process within the
                     # multiprocessing library.
-                    warnings.warn("KeyboardInterrupt: process interrupted while trying to "\
-                                f"acquire lock {self}. This might lead to leaking resources. "\
-                                "shared memory variable is " \
-                                f"""{getattr(self._shm, "shm", None)}. """ \
-                                "Try to use the query_for_error_after_interrupt() function to " \
-                                "check shared memory integrity. Make sure other processes "\
-                                "are still able to acquire the lock.",
-                                ShmLockDanglingSharedMemoryWarning)
+                    warnings.warn(
+                        "KeyboardInterrupt: process interrupted while trying to "
+                        f"acquire lock {self}. This might lead to leaking resources. "
+                        "shared memory variable is "
+                        f"""{getattr(self._shm, "shm", None)}. """
+                        "Try to use the query_for_error_after_interrupt() function to "
+                        "check shared memory integrity. Make sure other processes "
+                        "are still able to acquire the lock.",
+                        ShmLockDanglingSharedMemoryWarning,
+                    )
 
                     # raise keyboardinterrupt to stop the process; release() will clean up.
                     raise KeyboardInterrupt("ctrl+c") from err
@@ -339,13 +345,15 @@ class ShmLock(ShmModuleBaseLogger):
             return False
         except OSError as err:
             # on windows this might happen at program termination e.g. if an unittest fails
-            msg = f"During acquiring lock {self} the exit event handle got invalid (main "\
-                   "process terminated?). Make sure the exit event does not become invalid. "\
-                   "Alternatively use use_mock_exit_event() function which repleaces the exit "\
-                   "event with a mock event which simply uses time.sleep() and has no handle "\
-                   "which might become invalid."
+            msg = (
+                f"During acquiring lock {self} the exit event handle got invalid (main "
+                "process terminated?). Make sure the exit event does not become invalid. "
+                "Alternatively use use_mock_exit_event() function which repleaces the exit "
+                "event with a mock event which simply uses time.sleep() and has no handle "
+                "which might become invalid."
+            )
             self.error(msg)
-            self.release() # make sure lock is released
+            self.release()  # make sure lock is released
             raise OSError(msg) from err
 
     def _create_or_fail(self):
@@ -368,26 +376,29 @@ class ShmLock(ShmModuleBaseLogger):
             # this thread already acquired the lock
             # check that the uuid matches (otherwise something is very wrong)
             if self._shm.shm.buf[:LOCK_SHM_SIZE] == self._config.uuid.uuid_bytes:
-                self.debug("lock %s already acquired by this thread.",
-                           self)
+                self.debug("lock %s already acquired by this thread.", self)
                 return True
             # uuid does not match but seemingly this thread has (somehow) acquired the lock
             # this should not happen!
-            raise exceptions.ShmLockRuntimeError(f"lock {self} seemingly already acquired by "\
-                f"this thread but uuid does not match (expected {self._config.uuid}, "\
-                f"got {self._shm.shm.buf[:LOCK_SHM_SIZE]}). This should not happen!")
+            raise exceptions.ShmLockRuntimeError(
+                f"lock {self} seemingly already acquired by "
+                f"this thread but uuid does not match (expected {self._config.uuid}, "
+                f"got {self._shm.shm.buf[:LOCK_SHM_SIZE]}). This should not happen!"
+            )
         if self._config.track is not None:
             # disable unexpected keyword argument warning because track parameter is only
             # supported for python >= 3.13. We check that in the constructor however
             # pylint still reports it. There might be a better way to handle this?
-            self._shm.shm = shared_memory.SharedMemory(name=self._config.name, # pylint:disable=(unexpected-keyword-arg)
-                                                       create=True,
-                                                       size=LOCK_SHM_SIZE,
-                                                       track=self._config.track)
+            self._shm.shm = shared_memory.SharedMemory(  # pylint: disable=unexpected-keyword-arg
+                name=self._config.name,
+                create=True,
+                size=LOCK_SHM_SIZE,
+                track=self._config.track,
+            )
         else:
-            self._shm.shm = shared_memory.SharedMemory(name=self._config.name,
-                                                       create=True,
-                                                       size=LOCK_SHM_SIZE)
+            self._shm.shm = shared_memory.SharedMemory(
+                name=self._config.name, create=True, size=LOCK_SHM_SIZE
+            )
 
         # NOTE: shared memory is after creation(!) not filled with the uuid data in
         # the same operation. so it MIGHT be possible that the shm block has been
@@ -398,8 +409,10 @@ class ShmLock(ShmModuleBaseLogger):
 
         # are there any branches without keyboard interrupt which might lead to self._shm.shm
         # still being None but shared memory being created?
-        assert self._shm.shm is not None, "self._shm.shm is None without exception being raised. "\
+        assert self._shm.shm is not None, (
+            "self._shm.shm is None without exception being raised. "
             "This should not happen!"
+        )
 
         return True
 
@@ -452,9 +465,11 @@ class ShmLock(ShmModuleBaseLogger):
         """
 
         if getattr(self._shm, "shm", None) is not None:
-            raise exceptions.ShmLockRuntimeError(f"Lock {self} is currently acquired. This "\
-                "function checks for dangling shared memory after shared memory creation had "\
-                "been interrupted. release lock first.")
+            raise exceptions.ShmLockRuntimeError(
+                f"Lock {self} is currently acquired. This "
+                "function checks for dangling shared memory after shared memory creation had "
+                "been interrupted. release lock first."
+            )
 
         try:
 
@@ -462,7 +477,7 @@ class ShmLock(ShmModuleBaseLogger):
 
             while cnt < number_of_checks:
 
-                cnt+=1
+                cnt += 1
                 shm = None
 
                 # check if shared memory is attachable; NOTE that we do not call
@@ -482,15 +497,17 @@ class ShmLock(ShmModuleBaseLogger):
                         # wrote its uuid; we try multiple times to attach to the shm block.
                         # if we end up in this condition each time we assume that the
                         # block is dangling.
-                        time.sleep(0.05) # magic number; 50ms
+                        time.sleep(0.05)  # magic number; 50ms
                         continue
 
                     # check that this lock instance did not acquire the lock. this should
                     # not be possible with self._shm.shm being None
                     if shm.buf[:LOCK_SHM_SIZE] == self._config.uuid.uuid_bytes:
-                        raise exceptions.ShmLockRuntimeError("the buffer should not be equal "\
-                            f"to the uuid of the lock {str(self)} since self._shm is None and "\
-                            "so the uid should not have been set!")
+                        raise exceptions.ShmLockRuntimeError(
+                            "the buffer should not be equal "
+                            f"to the uuid of the lock {str(self)} since self._shm is None and "
+                            "so the uid should not have been set!"
+                        )
 
                     # some other process has acquired the lock. this instance can die now.
                     break
@@ -498,16 +515,19 @@ class ShmLock(ShmModuleBaseLogger):
                     if shm is not None:
                         shm.close()
             else:
-                self.error("KeyboardInterrupt: process interrupted while trying to "\
-                           "acquire lock %s. The shared memory block is PROBABLY "\
-                           "dangling since for %s times no uuid has been "\
-                           "written to the block. A manual clean up might be required, "\
-                           "i.e. on Linux you could try to attach and unlink. "\
-                           "On Windows all handles need to be closed.",
-                           self,
-                           number_of_checks)
-                raise exceptions.ShmLockDanglingSharedMemoryError("Potential "\
-                    f"dangling shm: {self}")
+                self.error(
+                    "KeyboardInterrupt: process interrupted while trying to "
+                    "acquire lock %s. The shared memory block is PROBABLY "
+                    "dangling since for %s times no uuid has been "
+                    "written to the block. A manual clean up might be required, "
+                    "i.e. on Linux you could try to attach and unlink. "
+                    "On Windows all handles need to be closed.",
+                    self,
+                    number_of_checks,
+                )
+                raise exceptions.ShmLockDanglingSharedMemoryError(
+                    "Potential " f"dangling shm: {self}"
+                )
 
             # if else not triggered in loop -> keyboard interrupt without dangling shm
             # message is raised
@@ -516,15 +536,19 @@ class ShmLock(ShmModuleBaseLogger):
             # created but with size 0; so it cannot be attached to (size == 0) or
             # created (exists already). In this case shared memory has to be removed
             # from /dev/shm manually
-            self.error("%s: shared memory %s is not available. "\
-                "This might be caused by a process termination. "\
-                "Please check the system for any remaining shared memory "\
+            self.error(
+                "%s: shared memory %s is not available. "
+                "This might be caused by a process termination. "
+                "Please check the system for any remaining shared memory "
                 "blocks and on Linux clean them up manually at path /dev/shm.",
                 err,
-                self)
-            raise exceptions.ShmLockValueError(f"Valueerror for {self}. On POSIX there is "\
-                                               "probably a zero-sized mmap file at /dev/shm "\
-                                               "which has to be removed manually") from err
+                self,
+            )
+            raise exceptions.ShmLockValueError(
+                f"Valueerror for {self}. On POSIX there is "
+                "probably a zero-sized mmap file at /dev/shm "
+                "which has to be removed manually"
+            ) from err
         except FileNotFoundError:
             # shared memory does not exist, so keyboard interrupt did not yield to
             # any undesired behavior. this is "all good"
@@ -561,12 +585,14 @@ class ShmLock(ShmModuleBaseLogger):
 
         try:
             if self._config.pid != os.getpid():
-                raise exceptions.ShmLockRuntimeError(f"lock {self} has been created in another "\
-                                                    "process and cannot be used in this process. "\
-                                                    "Do not shared locks among processes! If " \
-                                                    "shared memory has already been acquired this "\
-                                                    "might lead to a deadlock and/or leaking "\
-                                                    f"resource: shared memory is {self._shm}")
+                raise exceptions.ShmLockRuntimeError(
+                    f"lock {self} has been created in another "
+                    "process and cannot be used in this process. "
+                    "Do not shared locks among processes! If "
+                    "shared memory has already been acquired this "
+                    "might lead to a deadlock and/or leaking "
+                    f"resource: shared memory is {self._shm}"
+                )
         except AttributeError:
             # if exception is thrown before config has been defined during __init__ e.g. due to
             # failed type check
@@ -574,8 +600,10 @@ class ShmLock(ShmModuleBaseLogger):
 
         if (not force) and getattr(self._shm, "counter", 0) > 0:
             # for example if you try to release lock within context manager
-            raise exceptions.ShmLockRuntimeError(f"lock {self} is still acquired by this "\
-                "thread via contextmanager or __enter__ call.")
+            raise exceptions.ShmLockRuntimeError(
+                f"lock {self} is still acquired by this "
+                "thread via contextmanager or __enter__ call."
+            )
 
         if getattr(self._shm, "shm", None) is not None:
             # only release if shared memory reference has been set and counter reached 0.
@@ -590,15 +618,19 @@ class ShmLock(ShmModuleBaseLogger):
                 # can happen if the lock is acquired and the resource tracker cleans it up
                 # before it is released. Since this should not be a problem we just log it
                 # NOTE that this only occurs for posix systems which support unlink() function
-                self.debug("lock %s has been released already. This might happen on "\
-                           "posix systems if the resource tracker was used to clean "\
-                           "up while the lock was acquired.",
-                           self)
-            except Exception as err: # pylint: disable=(broad-exception-caught)
+                self.debug(
+                    "lock %s has been released already. This might happen on "
+                    "posix systems if the resource tracker was used to clean "
+                    "up while the lock was acquired.",
+                    self,
+                )
+            except Exception as err:  # pylint: disable=(broad-exception-caught)
                 # other errors will raised as RuntimeError
-                raise exceptions.ShmLockRuntimeError(f"process could not "\
-                    f"release lock {self}. This might result in a leaking resource! "\
-                    f"Error was {err}") from err
+                raise exceptions.ShmLockRuntimeError(
+                    f"process could not "
+                    f"release lock {self}. This might result in a leaking resource! "
+                    f"Error was {err}"
+                ) from err
         return False
 
     def __del__(self):
@@ -614,7 +646,6 @@ class ShmLock(ShmModuleBaseLogger):
         """
         # make sure member exists
         return getattr(self._shm, "shm", None) is not None
-
 
     @property
     def acquired(self) -> bool:
@@ -664,9 +695,9 @@ class ShmLock(ShmModuleBaseLogger):
         """
         self._config.description = description
 
-    def get_exit_event(self) -> Union[multiprocessing.synchronize.Event,
-                                      threading.Event,
-                                      ExitEventMock]:
+    def get_exit_event(
+        self,
+    ) -> Union[multiprocessing.synchronize.Event, threading.Event, ExitEventMock]:
         """
         get exit event; if lock should be stopped/prevent from further acquirements, set this
         event.
@@ -724,12 +755,14 @@ class ShmLock(ShmModuleBaseLogger):
             if shm is not None:
                 shm.close()
 
-    def add_exit_handlers(self,
-                          register_atexit: bool = True,
-                          register_signal: bool = True,
-                          register_weakref: bool = True,
-                          register_console_handler: bool = True,
-                          call_gc: bool = True):
+    def add_exit_handlers(
+        self,
+        register_atexit: bool = True,
+        register_signal: bool = True,
+        register_weakref: bool = True,
+        register_console_handler: bool = True,
+        call_gc: bool = True,
+    ):
         """
         Experimental and not recommended to use in production code!
 
@@ -759,7 +792,9 @@ class ShmLock(ShmModuleBaseLogger):
             # get potentially existing signal handlers
             existing_handlers_sigint = signal.getsignal(signal.SIGINT)
             existing_handlers_sigterm = signal.getsignal(signal.SIGTERM)
-            existing_handlers_sighup = signal.getsignal(signal.SIGHUP)
+            existing_handlers_sighup = None
+            if hasattr(signal, "SIGHUP"):
+                existing_handlers_sighup = signal.getsignal(signal.SIGHUP)
 
             def clean_up(signum, frame):
                 """
@@ -778,27 +813,31 @@ class ShmLock(ShmModuleBaseLogger):
             # register signal handlers
             signal.signal(signal.SIGINT, clean_up)
             signal.signal(signal.SIGTERM, clean_up)
-            signal.signal(signal.SIGHUP, clean_up)
-
+            if hasattr(signal, "SIGHUP"):
+                signal.signal(signal.SIGHUP, clean_up)
 
         if os.name == "nt" and register_console_handler:
             if win32api is not None and win32con is not None:
                 # only for windows systems which us necessary if a console is closed
                 def console_handler(ctrl_type):
-                    if ctrl_type in (win32con.CTRL_C_EVENT,
-                                    win32con.CTRL_CLOSE_EVENT,
-                                    win32con.CTRL_LOGOFF_EVENT,
-                                    win32con.CTRL_SHUTDOWN_EVENT,):
+                    if ctrl_type in (
+                        win32con.CTRL_C_EVENT,
+                        win32con.CTRL_CLOSE_EVENT,
+                        win32con.CTRL_LOGOFF_EVENT,
+                        win32con.CTRL_SHUTDOWN_EVENT,
+                    ):
                         self.release(force=True)
                         return True  # Prevent immediate termination if possible
                     return False  # Continue default behavior
 
                 win32api.SetConsoleCtrlHandler(console_handler, True)
             else:
-                self.error("win32api or win32con is not available. "\
-                           "Cannot register console handler for lock %s. "\
-                           "Make sure you have the pywin32 package installed.",
-                           self)
+                self.error(
+                    "win32api or win32con is not available. "
+                    "Cannot register console handler for lock %s. "
+                    "Make sure you have the pywin32 package installed.",
+                    self,
+                )
 
         if register_weakref:
             # register weakref handler to clean up the shared memory

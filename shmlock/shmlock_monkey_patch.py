@@ -11,6 +11,7 @@ For further reading also see:
 - https://github.com/vllm-project/vllm/issues/5468
 - https://github.com/vllm-project/vllm/pull/5512
 """
+
 import sys
 import os
 import warnings
@@ -52,10 +53,10 @@ def remove_shm_from_resource_tracker(pattern: str, print_warning: bool = True) -
         If you set pattern == "", all shared memory tracking will be disabled and you will not
         see any warnings from it. NOTE that this also increases performance on posix systems
         since the un-registering of the shared memory does not happen any longer.
-        
+
     print_warning : bool, optional
         Whether to print warnings if the function is called on non-posix systems, by default True
-        
+
     Raises
     ------
     RuntimeError
@@ -79,7 +80,7 @@ def remove_shm_from_resource_tracker(pattern: str, print_warning: bool = True) -
             "remove_shm_from_resource_tracker is (probably) "
             "not necessary on non-posix systems",
             UserWarning,
-            stacklevel=2
+            stacklevel=2,
         )
 
     if not pattern and print_warning:
@@ -89,7 +90,7 @@ def remove_shm_from_resource_tracker(pattern: str, print_warning: bool = True) -
             "This can lead to memory leaks if shared memory is not unlinked manually. "
             "Use with caution",
             UserWarning,
-            stacklevel=2
+            stacklevel=2,
         )
 
     # NOTE that this function is not process-safe. This is because each process should have its
@@ -100,14 +101,14 @@ def remove_shm_from_resource_tracker(pattern: str, print_warning: bool = True) -
         def fix_register(name: str, rtype: str) -> Optional[Any]:
             """
             Patched register function that filters out shared memory based on patterns.
-            
+
             Parameters
             ----------
             name : str
                 Resource name
             rtype : str
                 Resource type
-                
+
             Returns
             -------
             Optional[Any]
@@ -116,21 +117,23 @@ def remove_shm_from_resource_tracker(pattern: str, print_warning: bool = True) -
             # Check if pattern contained in any of the elements within _PATTERN_LIST
             if any(pattern in name for pattern in _PATTERN_LIST):
                 return None
-            return resource_tracker._resource_tracker.register(name, rtype)  # pylint: disable=protected-access
+            return resource_tracker._resource_tracker.register(  # pylint: disable=protected-access
+                name, rtype
+            )
 
         resource_tracker.register = fix_register
 
         def fix_unregister(name: str, rtype: str) -> Optional[Any]:
             """
             Patched unregister function that filters out shared memory based on patterns.
-            
+
             Parameters
             ----------
             name : str
                 Resource name
             rtype : str
                 Resource type
-                
+
             Returns
             -------
             Optional[Any]
@@ -139,7 +142,9 @@ def remove_shm_from_resource_tracker(pattern: str, print_warning: bool = True) -
             # Check if pattern contained in any of the elements within _PATTERN_LIST
             if any(pattern in name for pattern in _PATTERN_LIST):
                 return None
-            return resource_tracker._resource_tracker.unregister(name, rtype)  # pylint: disable=protected-access
+            return resource_tracker._resource_tracker.unregister(  # pylint: disable=protected-access
+                name, rtype
+            )
 
         resource_tracker.unregister = fix_unregister
 

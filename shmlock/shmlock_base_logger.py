@@ -4,11 +4,13 @@ Base logger and helper functions for shmlock module.
 This module provides a wrapper around the logging functionality and helper functions
 to create configured loggers with optional color and file logging support.
 """
+
 import logging
 from typing import Optional
 
 try:
     import coloredlogs
+
     HAS_COLOREDLOGS = True
 except ModuleNotFoundError:
     coloredlogs = None
@@ -23,11 +25,11 @@ def create_logger(
     file_path: Optional[str] = None,
     level_file: int = logging.DEBUG,
     use_colored_logs: bool = True,
-    fmt: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    fmt: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 ) -> logging.Logger:
     """
     Set up a logger with color (if available and enabled) and file logging (if enabled).
-    
+
     Note that this logger is not set anywhere in the shmlock objects itself, so in case you want
     them to use it you have to manually set it via: ShmLock(..., logger=create_logger(...))
 
@@ -53,7 +55,7 @@ def create_logger(
     logging.Logger
         Logger object with the given name and level, if file_path is set it will
         also create a file handler with the given level_file
-        
+
     Raises
     ------
     ValueError
@@ -97,14 +99,14 @@ def create_logger(
             file_handler.setFormatter(logger_format)
             logger.addHandler(file_handler)
         except (OSError, PermissionError) as e:
-            logger.warning(f"Could not create file handler for {file_path}: {e}")
+            logger.warning("Could not create file handler for %s: %s", file_path, e)
 
     if use_colored_logs and HAS_COLOREDLOGS:
         # Set colored logs if available
         try:
             coloredlogs.install(logger=logger, level=level, fmt=fmt)
         except Exception as e:  # pylint: disable=broad-except
-            logger.warning(f"Could not install colored logs: {e}")
+            logger.warning("Could not install colored logs: %s", e)
 
     return logger
 
@@ -112,7 +114,7 @@ def create_logger(
 class ShmModuleBaseLogger:
     """
     Base logger wrapper for shmlock module classes.
-    
+
     This class provides a common logging interface for all shmlock classes,
     ensuring consistent logging behavior throughout the module.
     """
@@ -120,7 +122,7 @@ class ShmModuleBaseLogger:
     def __init__(self, logger: Optional[logging.Logger] = None) -> None:
         """
         Initialize the logger wrapper.
-        
+
         Basically a wrapper around the logger which prints the log
         only if logger is set.
 
@@ -128,7 +130,7 @@ class ShmModuleBaseLogger:
         ----------
         logger : logging.Logger, optional
             Logger to be used, by default None
-            
+
         Raises
         ------
         ShmLockValueError

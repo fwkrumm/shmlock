@@ -10,6 +10,7 @@ https://github.com/vllm-project/vllm/issues/5468
 https://github.com/vllm-project/vllm/pull/5512
 
 """
+
 import sys
 import os
 import multiprocessing
@@ -35,21 +36,21 @@ if os.name == "posix":
         # parameter to deactivate tracking
         shmlock.remove_shm_from_resource_tracker(LOCK_NAME)
 
+
 def acquire_lock_worker():
     """
     acquire lock indefinitely until terminated
     """
     s = shmlock.ShmLock(LOCK_NAME, track=False if sys.version_info >= (3, 13) else None)
 
-    def cleanup(signum, frame): # pylint:disable=(unused-argument)
+    def cleanup(signum, frame):  # pylint:disable=(unused-argument)
         s.release(force=True)
-        os._exit(0) # pylint:disable=(protected-access)
+        os._exit(0)  # pylint:disable=(protected-access)
 
     signal.signal(signal.SIGTERM, cleanup)
     with s:
         while True:
             pass
-
 
 
 class TestReleaseAtTermination(unittest.TestCase):
@@ -70,7 +71,9 @@ class TestReleaseAtTermination(unittest.TestCase):
         """
 
         # create a lock and a process
-        l = shmlock.ShmLock(LOCK_NAME, track=False if sys.version_info >= (3, 13) else None)
+        l = shmlock.ShmLock(
+            LOCK_NAME, track=False if sys.version_info >= (3, 13) else None
+        )
         p = multiprocessing.Process(target=acquire_lock_worker)
 
         p.start()
@@ -78,7 +81,9 @@ class TestReleaseAtTermination(unittest.TestCase):
 
         # check that process as started and lock has been acquired by the process
         self.assertTrue(p.is_alive(), "Process is not alive after start")
-        self.assertFalse(l.acquire(timeout=False), "lock should be acquired by the process")
+        self.assertFalse(
+            l.acquire(timeout=False), "lock should be acquired by the process"
+        )
 
         # termiante the process
         p.terminate()
@@ -86,7 +91,9 @@ class TestReleaseAtTermination(unittest.TestCase):
 
         # check that signal works to release the lock
         self.assertFalse(p.is_alive(), "Process is still alive after termination")
-        self.assertTrue(l.acquire(timeout=1), "Lock not released after process termination")
+        self.assertTrue(
+            l.acquire(timeout=1), "Lock not released after process termination"
+        )
 
 
 if __name__ == "__main__":
