@@ -391,7 +391,7 @@ We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.
 
 3. Run tests:
    ```bash
-   pytest tests/
+   python -m unittest discover tests/
    ```
 
 4. Run linting:

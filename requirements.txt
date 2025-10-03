@@ -7,9 +7,7 @@ pylint>=3.0,<4.0
 black>=23.0
 mypy>=1.0
 
-# Testing
-pytest>=7.0
-pytest-cov>=4.0
+# Testing (using built-in unittest)
 coverage>=7.0,<8.0
 
 # Examples dependencies  

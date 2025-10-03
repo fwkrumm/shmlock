@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New test suite for monkey patch functionality (`test_monkey_patch.py`)
 - Comprehensive API documentation in README
 - Development dependencies configuration in pyproject.toml
-- Black, mypy, and pytest configuration
+- Black and mypy configuration (removed unnecessary pytest dependency)
 - Enhanced .gitignore with Python-specific patterns
 - Equality and hash methods for ShmUuid class
 - Input validation for UUID conversion methods
@@ -49,7 +49,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Technical Improvements
 - Added proper type checking with mypy configuration
 - Implemented code formatting standards with Black
-- Enhanced testing framework with pytest configuration
+- Enhanced testing framework using built-in unittest (removed unnecessary pytest dependency)
 - Improved development dependencies management
 - Better code documentation and inline comments
 - Enhanced error propagation and handling
