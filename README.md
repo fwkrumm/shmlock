@@ -158,25 +158,25 @@ import json
 def update_shared_file(data):
     """Update a shared JSON file safely across processes."""
     lock = shmlock.ShmLock("file_access_lock")
-    
+
     with lock.lock(timeout=10.0) as acquired:
         if not acquired:
             raise TimeoutError("Could not acquire file lock")
-        
+
         # Read current data
         try:
             with open("shared_data.json", "r") as f:
                 current_data = json.load(f)
         except FileNotFoundError:
             current_data = {}
-        
+
         # Update data
         current_data.update(data)
-        
+
         # Write back
         with open("shared_data.json", "w") as f:
             json.dump(current_data, f, indent=2)
-        
+
         print(f"Updated file with: {data}")
 
 # Usage from multiple processes
@@ -192,27 +192,27 @@ from typing import Optional
 
 class SharedResourcePool:
     """Manage a pool of shared resources across processes."""
-    
+
     def __init__(self, pool_name: str, max_resources: int = 5):
         self.pool_name = pool_name
         self.max_resources = max_resources
         self.lock = shmlock.ShmLock(f"pool_{pool_name}")
-    
+
     def acquire_resource(self, timeout: float = 30.0) -> Optional[int]:
         """Acquire a resource from the pool."""
         with self.lock.lock(timeout=timeout) as acquired:
             if not acquired:
                 return None
-            
+
             # Check resource availability (simplified)
             # In real implementation, you'd track this in shared memory
             for resource_id in range(self.max_resources):
                 if self._is_resource_available(resource_id):
                     self._mark_resource_used(resource_id)
                     return resource_id
-            
+
             return None  # No resources available
-    
+
     def release_resource(self, resource_id: int):
         """Release a resource back to the pool."""
         with self.lock.lock(timeout=10.0) as acquired:
@@ -293,7 +293,7 @@ class ShmLock(lock_name, poll_interval=0.05, logger=None, exit_event=None, track
 Acquire the lock.
 
 **Parameters:**
-- `timeout` (float|bool|None): 
+- `timeout` (float|bool|None):
   - `None`: Wait indefinitely
   - `False`: Single attempt, no waiting
   - `True`: 1-second timeout
@@ -348,7 +348,7 @@ shmlock.remove_shm_from_resource_tracker("")
 
 #### 4. Memory leaks
 **Cause:** Processes terminated without releasing locks.
-**Solution:** 
+**Solution:**
 - Always use context managers or try/finally blocks
 - Use exit events to signal termination
 - On Linux, manually clean `/dev/shm/` if needed

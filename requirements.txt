@@ -1,5 +1,5 @@
 # Development dependencies - install with: pip install -e .[dev]
-# Note that none of these dependencies are required for lock functionality itself, 
+# Note that none of these dependencies are required for lock functionality itself,
 # but only for development, testing, and examples.
 
 # Development tools
@@ -10,7 +10,7 @@ mypy>=1.0
 # Testing (using built-in unittest)
 coverage>=7.0,<8.0
 
-# Examples dependencies  
+# Examples dependencies
 filelock>=3.0,<4.0
 pyzmq>=26.0,<27.0
 
