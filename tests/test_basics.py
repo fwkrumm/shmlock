@@ -230,7 +230,7 @@ class BasicsTest(unittest.TestCase):
             # the trailing NoneType None is because there is no exception
             self.assertEqual(
                 assert_log.output,
-                ["ERROR:test_logger:base logger test exception" "\nNoneType: None"],
+                ["ERROR:test_logger:base logger test exception\nNoneType: None"],
             )
 
     def test_logger_none(self):

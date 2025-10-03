@@ -88,8 +88,8 @@ class MonkeyPatchTest(unittest.TestCase):
             self.skipTest("Skipping test on Python 3.13+ due to version restriction")
 
         # Mock the resource tracker
-        mock_resource_tracker._resource_tracker = MagicMock()
-        mock_resource_tracker._CLEANUP_FUNCS = {"shared_memory": lambda x: None}
+        mock_resource_tracker._resource_tracker = MagicMock()  # pylint: disable=protected-access
+        mock_resource_tracker._CLEANUP_FUNCS = {"shared_memory": lambda x: None}  # pylint: disable=protected-access
 
         # Apply monkey patch
         remove_shm_from_resource_tracker("test_pattern", print_warning=False)
@@ -107,14 +107,14 @@ class MonkeyPatchTest(unittest.TestCase):
             self.skipTest("Skipping test on Python 3.13+ due to version restriction")
 
         # Mock the resource tracker with shared_memory cleanup function
-        mock_resource_tracker._resource_tracker = MagicMock()
-        mock_resource_tracker._CLEANUP_FUNCS = {"shared_memory": lambda x: None}
+        mock_resource_tracker._resource_tracker = MagicMock()  # pylint: disable=protected-access
+        mock_resource_tracker._CLEANUP_FUNCS = {"shared_memory": lambda x: None}  # pylint: disable=protected-access
 
         # Apply monkey patch with empty pattern
         remove_shm_from_resource_tracker("", print_warning=False)
 
         # Verify cleanup function was removed
-        self.assertNotIn("shared_memory", mock_resource_tracker._CLEANUP_FUNCS)
+        self.assertNotIn("shared_memory", mock_resource_tracker._CLEANUP_FUNCS)  # pylint: disable=protected-access
 
     def test_multiple_pattern_application(self) -> None:
         """Test that multiple patterns can be applied."""
@@ -122,15 +122,15 @@ class MonkeyPatchTest(unittest.TestCase):
             self.skipTest("Skipping test on Python 3.13+ due to version restriction")
 
         with patch("shmlock.shmlock_monkey_patch.resource_tracker") as mock_rt:
-            mock_rt._resource_tracker = MagicMock()
-            mock_rt._CLEANUP_FUNCS = {}
+            mock_rt._resource_tracker = MagicMock()  # pylint: disable=protected-access
+            mock_rt._CLEANUP_FUNCS = {}  # pylint: disable=protected-access
 
             # Apply multiple patterns
             remove_shm_from_resource_tracker("pattern1", print_warning=False)
             remove_shm_from_resource_tracker("pattern2", print_warning=False)
 
-            # Both should be applied without error
-            self.assertTrue(True)  # If we get here, no exceptions were raised
+            # Both should be applied without error - if we get here, no exceptions were raised
+            # This test just verifies no exceptions are thrown
 
 
 if __name__ == "__main__":

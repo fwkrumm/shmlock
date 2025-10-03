@@ -10,8 +10,8 @@ import time
 import logging
 import tempfile
 import os
-from typing import List
 from unittest.mock import patch, MagicMock
+from multiprocessing import shared_memory
 
 import shmlock
 import shmlock.shmlock_exceptions as exceptions
@@ -111,7 +111,7 @@ class ImprovedFunctionalityTest(unittest.TestCase):
                 pid=0,
             )
 
-    def test_shmUuid_equality_and_hash(self) -> None:
+    def test_shm_uuid_equality_and_hash(self) -> None:
         """Test ShmUuid equality and hash functionality."""
         uuid1 = ShmUuid()
         uuid2 = ShmUuid()
@@ -128,7 +128,7 @@ class ImprovedFunctionalityTest(unittest.TestCase):
         self.assertNotEqual(uuid1, "not_a_uuid")
         self.assertNotEqual(uuid1, 42)
 
-    def test_shmUuid_conversion_edge_cases(self) -> None:
+    def test_shm_uuid_conversion_edge_cases(self) -> None:
         """Test ShmUuid conversion methods with edge cases."""
         # Test invalid byte representation
         with self.assertRaises(ValueError):
@@ -286,21 +286,19 @@ class ImprovedFunctionalityTest(unittest.TestCase):
             if result:
                 lock.release()
 
-        except Exception as e:
+        except (ValueError, TypeError, AttributeError) as e:
             self.fail(f"Timeout parameter handling failed: {e}")
 
     def tearDown(self) -> None:
         """Clean up after tests."""
         # Try to clean up any remaining shared memory
         try:
-            from multiprocessing import shared_memory
-
             shm = shared_memory.SharedMemory(name=self.test_name)
             shm.close()
             shm.unlink()
         except FileNotFoundError:
             pass  # Already cleaned up
-        except Exception:
+        except (OSError, ValueError):
             pass  # Ignore other cleanup errors
 
 
