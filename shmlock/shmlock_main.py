@@ -1,5 +1,5 @@
 """
-main class of shared memory lock.
+Main class of shared memory lock.
 
 If possible never terminate this process using ctrl+c or similar. This can lead to dangling
 shared memory blocks. Best practice is to use the exit event to stop the lock from acquirement.
@@ -14,19 +14,20 @@ import multiprocessing.synchronize
 from multiprocessing import shared_memory
 from contextlib import contextmanager
 import logging
-from typing import Union, Optional
+from typing import Union, Optional, Iterator, Any
 import signal
 import weakref
 import atexit
 import gc
 
-__all__ = ["ShmLock",
-           "remove_shm_from_resource_tracker",
-           "exceptions",
-           "create_logger"
-           ]
+__all__ = [
+    "ShmLock",
+    "remove_shm_from_resource_tracker",
+    "exceptions", 
+    "create_logger"
+]
 
-# reveal functions for resource tracking adjustments
+# Import functions for resource tracking adjustments
 import shmlock.shmlock_exceptions as exceptions
 from shmlock.shmlock_monkey_patch import remove_shm_from_resource_tracker
 from shmlock.shmlock_base_logger import ShmModuleBaseLogger, create_logger
@@ -37,115 +38,153 @@ from shmlock.shmlock_warnings import ShmLockDanglingSharedMemoryWarning
 
 if os.name == "nt":
     try:
-        import win32api # pylint: disable=import-error
-        import win32con # pylint: disable=import-error
+        import win32api  # pylint: disable=import-error
+        import win32con  # pylint: disable=import-error
     except ImportError:
-        # prevents console handler on exit
+        # Prevents console handler on exit
         win32api = None
         win32con = None
 else:
-    # on posix systems we do not need to import win32api and win32con
+    # On POSIX systems we do not need to import win32api and win32con
     win32api = None
     win32con = None
 
-LOCK_SHM_SIZE = 16 # size of the shared memory block in bytes to store uuid
+LOCK_SHM_SIZE = 16  # Size of the shared memory block in bytes to store uuid
 
 
 class ShmLock(ShmModuleBaseLogger):
-
     """
-    lock class using shared memory to synchronize shared resources access
+    Lock class using shared memory to synchronize shared resources access.
 
     NOTE that the lock is reentrant, i.e. the same lock object can be acquired multiple times
     by the same thread.
+    
+    Examples
+    --------
+    Basic usage with context manager:
+    
+    >>> lock = ShmLock("my_lock")
+    >>> with lock.lock(timeout=1.0) as acquired:
+    ...     if acquired:
+    ...         # Critical section
+    ...         pass
+    
+    Usage with callable syntax:
+    
+    >>> with lock(timeout=1.0) as acquired:
+    ...     if acquired:
+    ...         # Critical section
+    ...         pass
     """
 
-    def __init__(self,
-                 lock_name: str,
-                 poll_interval: Union[float, int] = 0.05,
-                 logger: logging.Logger = None,
-                 exit_event: Union[multiprocessing.synchronize.Event, threading.Event] = None,
-                 track: bool = None):
+    def __init__(
+        self,
+        lock_name: str,
+        poll_interval: Union[float, int] = 0.05,
+        logger: Optional[logging.Logger] = None,
+        exit_event: Optional[Union[multiprocessing.synchronize.Event, threading.Event]] = None,
+        track: Optional[bool] = None
+    ) -> None:
         """
-        default init. set shared memory name (for lock) and poll_interval.
-        the latter is used to check if lock is available every poll_interval seconds
+        Initialize shared memory lock.
+        
+        Set shared memory name (for lock) and poll_interval.
+        The latter is used to check if lock is available every poll_interval seconds.
 
         Parameters
         ----------
         lock_name : str
-            name of the lock i.e. the shared memory block.
-        poll_interval : float or int, optional
-            time delay in seconds after a failed acquire try after which it will be tried
+            Name of the lock i.e. the shared memory block
+        poll_interval : Union[float, int], optional
+            Time delay in seconds after a failed acquire try after which it will be tried
             again to acquire the lock, by default 0.05s (50ms)
-        logger : logging.Logger, optional
-            a logger, this class only logs at debug level which process tried to acquire,
+        logger : Optional[logging.Logger], optional
+            A logger, this class only logs at debug level which process tried to acquire,
             which succeeded etc., by default None
-        exit_event : multiprocessing.synchronize.Event | threading.Event, optional
-            if None is provided a simple sleep will be used. if the exit event is set, the
+        exit_event : Optional[Union[multiprocessing.synchronize.Event, threading.Event]], optional
+            If None is provided a simple sleep will be used. If the exit event is set, the
             acquirement will stop and it will not be possible to acquire a lock until event is
             unset/cleared, by default None
-        track : bool, optional
-            set to False if you do want the shared memory block been tracked.
-            This is parameter only supported for python >= 3.13 in SharedMemory
+        track : Optional[bool], optional
+            Set to False if you do want the shared memory block been tracked.
+            This parameter is only supported for Python >= 3.13 in SharedMemory
             class, by default None
+            
+        Raises
+        ------
+        exceptions.ShmLockValueError
+            If poll_interval is not positive, lock_name is not a string, or exit_event
+            is not the correct type
+        ValueError
+            If track parameter is set but Python version is < 3.13
         """
-        self._shm = threading.local() # will contain shared memory reference and counter
+        self._shm = threading.local()  # Will contain shared memory reference and counter
         super().__init__(logger=logger)
 
-        # type checks
-        if (not isinstance(poll_interval, (float, int,))) or poll_interval <= 0:
+        # Type checks
+        if (not isinstance(poll_interval, (float, int))) or poll_interval <= 0:
             raise exceptions.ShmLockValueError("poll_interval must be a float or int and > 0")
         if not isinstance(lock_name, str):
             raise exceptions.ShmLockValueError("lock_name must be a string")
         if exit_event and \
-            not isinstance(exit_event, (multiprocessing.synchronize.Event, threading.Event,)):
-            raise exceptions.ShmLockValueError("exit_event must be a multiprocessing.Event "\
-                                               "or thrading.Event")
+            not isinstance(exit_event, (multiprocessing.synchronize.Event, threading.Event)):
+            raise exceptions.ShmLockValueError(
+                "exit_event must be a multiprocessing.Event or threading.Event"
+            )
 
         if not lock_name:
             raise exceptions.ShmLockValueError("lock_name must not be empty")
 
-        # create config containing all parameters
-        self._config = ShmLockConfig(name=lock_name,
-                                     poll_interval=float(poll_interval),
-                                     timeout=None, # for __call__
-                                     exit_event=exit_event if exit_event is not None else\
-                                          ExitEventMock(),
-                                     track=None,
-                                     uuid=ShmUuid(),
-                                     pid=os.getpid())
+        # Create config containing all parameters
+        self._config = ShmLockConfig(
+            name=lock_name,
+            poll_interval=float(poll_interval),
+            timeout=None,  # For __call__
+            exit_event=exit_event if exit_event is not None else ExitEventMock(),
+            track=None,
+            uuid=ShmUuid(),
+            pid=os.getpid()
+        )
 
         if track is not None:
-            # track parameter not supported for python < 3.13
+            # Track parameter not supported for Python < 3.13
             if sys.version_info < (3, 13):
-                raise ValueError("track parameter has been set but it is only supported for "\
-                                 "python >= 3.13")
+                raise ValueError(
+                    "track parameter has been set but it is only supported for Python >= 3.13"
+                )
             self._config.track = bool(track)
 
         self.debug("lock %s initialized.", self)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
-        representation of the lock class
+        Return string representation of the lock class.
 
         Returns
         -------
         str
-            representation of the lock class
+            String representation of the lock class
         """
-        return f"ShmLock(name={self._config.name}, "\
-               f"uuid={self._config.uuid}, "\
-               f"description={self._config.description})"
+        return (
+            f"ShmLock(name={self._config.name}, "
+            f"uuid={self._config.uuid}, "
+            f"description={self._config.description})"
+        )
 
     @contextmanager
-    def lock(self, timeout: float = None):
+    def lock(self, timeout: Optional[Union[float, bool]] = None) -> Iterator[bool]:
         """
-        lock method to be used as context manager
+        Lock method to be used as context manager.
 
         Parameters
         ----------
-        timeout : float, optional
-            max timeout in seconds until lock acquirement is aborted, by default None
+        timeout : Optional[Union[float, bool]], optional
+            Max timeout in seconds until lock acquirement is aborted.
+            - None: wait indefinitely
+            - False: no timeout (try acquire lock one time)
+            - True: 1 second timeout
+            - float: timeout in seconds
+            By default None
 
         Yields
         ------
@@ -155,20 +194,24 @@ class ShmLock(ShmModuleBaseLogger):
         try:
             if self.acquire(timeout=timeout):
                 self._shm.counter = getattr(self._shm, "counter", 0) + 1
-                self.debug("lock acquired via contextmanager incremented thread ref counter to %d",
-                           self._shm.counter)
+                self.debug(
+                    "lock acquired via contextmanager incremented thread ref counter to %d",
+                    self._shm.counter
+                )
                 yield True
                 return
         finally:
-            # decrement counter (default it to 1 in ase lock has never been acquired before so
+            # Decrement counter (default it to 1 in case lock has never been acquired before so
             # that counter never becomes negative); this would otherwise happen if one would
             # (for whatever reason) call release() multiple times without acquiring the lock
             self._shm.counter = max(getattr(self._shm, "counter", 1) - 1, 0)
-            self.debug("lock %s decremented thread ref counter to %d",
-                    self,
-                    self._shm.counter)
+            self.debug(
+                "lock %s decremented thread ref counter to %d",
+                self,
+                self._shm.counter
+            )
             if self._shm.counter == 0:
-                # release the lock if counter is 0
+                # Release the lock if counter is 0
                 self.release()
         yield False
 

@@ -1,104 +1,123 @@
 """
-config dataclass for the shared memory lock
+Configuration dataclass for the shared memory lock.
+
+This module provides configuration management and mock classes
+for the shared memory lock implementation.
 """
 import time
 import multiprocessing
 import multiprocessing.synchronize
 import threading
-from dataclasses import dataclass
-from typing import Union
+from dataclasses import dataclass, field
+from typing import Union, Optional
 
 from shmlock.shmlock_uuid import ShmUuid
 
 
-class ExitEventMock():
+class ExitEventMock:
     """
-    mock class for exit event if not desired by user. Note that this is not thread-safe or
-    process-safe and should only be used if the user does not want so use any threading or
-    multiprocessing events as exit event. The wait will simply be a sleep for given timeout.
+    Mock class for exit event when not desired by user.
+    
+    Note that this is not thread-safe or process-safe and should only be used
+    if the user does not want to use any threading or multiprocessing events
+    as exit event. The wait will simply be a sleep for given timeout.
     """
 
-    def __init__(self):
-        """
-        initialize the mock exit event
-        """
-        self._set = False
+    def __init__(self) -> None:
+        """Initialize the mock exit event."""
+        self._set: bool = False
 
     def is_set(self) -> bool:
         """
-        mock is_set function to resemble Event.is_set()
+        Mock is_set function to resemble Event.is_set().
+        
         This function returns True if the exit event is set, otherwise False.
 
         Returns
         -------
         bool
-            True if the exit event is set, otherwise False.
+            True if the exit event is set, otherwise False
         """
         return self._set
 
-    def set(self):
-        """
-        mock set function to resemble Event.set()
-        """
+    def set(self) -> None:
+        """Mock set function to resemble Event.set()."""
         self._set = True
 
-    def clear(self):
-        """
-        mock clear function to resemble Event.clear()
-        """
+    def clear(self) -> None:
+        """Mock clear function to resemble Event.clear()."""
         self._set = False
 
-    def wait(self, sleep_time: float):
+    def wait(self, sleep_time: float) -> None:
         """
-        mock wait function to resemble Event(). Note however that this does not react on
-        .set() or .clear() calls and will simply sleep for the given sleep time.
+        Mock wait function to resemble Event().
+        
+        Note however that this does not react on .set() or .clear() calls
+        and will simply sleep for the given sleep time.
 
         Parameters
         ----------
         sleep_time : float
-            time in seconds to wait until the function returns.
+            Time in seconds to wait until the function returns
         """
         if not self._set:
             time.sleep(sleep_time)
-        # we do not need a return Value
 
 
 @dataclass
-class ShmLockConfig(): # pylint: disable=(too-many-instance-attributes)
+class ShmLockConfig:  # pylint: disable=(too-many-instance-attributes)
     """
-    data class to store the configuration parameters of the lock
-
-    TODO we could include a type check in this dataclass
+    Data class to store the configuration parameters of the lock.
 
     Attributes
     ----------
     name : str
-        name of the lock i.e. the shared memory block
+        Name of the lock i.e. the shared memory block
     poll_interval : float
-        time delay in seconds after a failed acquire try after which it will be tried
+        Time delay in seconds after a failed acquire try after which it will be tried
         again to acquire the lock
-    exit_event : multiprocessing.synchronize.Event | threading.Event
-        if None is provided a new one will be initialized. if event is set to true
-        -> acquirement will stop and it will not be possible to acquire a lock until event is
+    exit_event : Union[multiprocessing.synchronize.Event, threading.Event, ExitEventMock]
+        Exit event to control lock acquisition. If event is set to true,
+        acquirement will stop and it will not be possible to acquire a lock until event is
         unset/cleared
-    track : bool
-        set to False if you do want the shared memory block been tracked.
-        This is parameter only supported for python >= 3,13 in SharedMemory
-        class
-    timeout : float
-        max timeout in seconds until lock acquirement is aborted
+    track : Optional[bool]
+        Set to False if you do want the shared memory block been tracked.
+        This is parameter only supported for python >= 3.13 in SharedMemory class
+    timeout : Optional[float]
+        Max timeout in seconds until lock acquirement is aborted
     uuid : ShmUuid
-        uuid of the lock
-    description : str, optional
-        custom description of the lock which can be set as property setter, by default ""
+        UUID of the lock
+    pid : int
+        Process ID where the lock was created
+    description : str
+        Custom description of the lock which can be set as property setter
     """
     name: str
-    poll_interval: Union[float, int]
+    poll_interval: float
     exit_event: Union[multiprocessing.synchronize.Event, threading.Event, ExitEventMock]
-    track: bool
-    timeout: float
+    track: Optional[bool]
+    timeout: Optional[float]
     uuid: ShmUuid
-    pid: int # process id of the lock instance (should stay the same as
-             # long as the user does not share the lock via forking which is
-             # STRONGLY DISCOURAGED!)
-    description: str = "" # custom description
+    pid: int
+    description: str = field(default="")
+
+    def __post_init__(self) -> None:
+        """
+        Validate configuration parameters after initialization.
+        
+        Raises
+        ------
+        ValueError
+            If any configuration parameter is invalid
+        """
+        if not isinstance(self.name, str) or not self.name:
+            raise ValueError("name must be a non-empty string")
+        
+        if not isinstance(self.poll_interval, (int, float)) or self.poll_interval <= 0:
+            raise ValueError("poll_interval must be a positive number")
+        
+        if self.timeout is not None and (not isinstance(self.timeout, (int, float)) or self.timeout < 0):
+            raise ValueError("timeout must be a non-negative number or None")
+        
+        if not isinstance(self.pid, int) or self.pid <= 0:
+            raise ValueError("pid must be a positive integer")
