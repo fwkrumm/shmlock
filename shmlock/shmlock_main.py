@@ -22,14 +22,14 @@ import gc
 
 try:
     # try import memory barrier module
-    import pymembar
+    import membar
 except ImportError:
     # module not found; warn user that memory barriers will not be used
     # however this might be intentional; currently there is not parameter for this
-    warnings.warn("pymembar module not found. Memory barriers will not be used. "
+    warnings.warn("membar module not found. Memory barriers will not be used. "
                   "This might lead to unexpected behavior on some architectures.",
                   stacklevel=2)
-    pymembar = None
+    membar = None
 
 __all__ = ["ShmLock",
            "remove_shm_from_resource_tracker",
@@ -371,8 +371,8 @@ class ShmLock(ShmModuleBaseLogger):
 
         # make all reads are visible so that the successful acquirement assures
         #  that potential memory operations are visible to this process
-        if pymembar is not None:
-            pymembar.rmb()
+        if membar is not None:
+            membar.rmb()
 
         return True
 
@@ -536,8 +536,8 @@ class ShmLock(ShmModuleBaseLogger):
         # necessary on all architectures, but it's a good practice to ensure
         # that all writes are visible to other processes before releasing the
         # lock.
-        if pymembar is not None:
-            pymembar.wmb()
+        if membar is not None:
+            membar.wmb()
 
         try:
             if self._config.pid != os.getpid():
