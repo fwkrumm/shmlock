@@ -425,3 +425,5 @@ To ensure safe cleanup, consider alternatives such as `atexit`, `signal.signal`,
 ## ToDos
 
 - add membar to optional build dependencies in pyproject.toml etc.
+- rework advantages/disadvantages section; also add phrase named semaphore
+- (?) temporarily overwrite signal handlers during acquirement to prevent SIGINT/SIGTERM during acquirement

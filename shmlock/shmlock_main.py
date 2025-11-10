@@ -20,6 +20,17 @@ import weakref
 import atexit
 import gc
 
+try:
+    # try import memory barrier module
+    import pymembar
+except ImportError:
+    # module not found; warn user that memory barriers will not be used
+    # however this might be intentional; currently there is not parameter for this
+    warnings.warn("pymembar module not found. Memory barriers will not be used. "
+                  "This might lead to unexpected behavior on some architectures.",
+                  stacklevel=2)
+    pymembar = None
+
 __all__ = ["ShmLock",
            "remove_shm_from_resource_tracker",
            "exceptions",
@@ -358,8 +369,10 @@ class ShmLock(ShmModuleBaseLogger):
         assert self._shm.shm is not None, "self._shm.shm is None without exception being raised. "\
             "This should not happen!"
 
-        # TODO: rmb(); make all reads are visible so that the successful acquirement assures
+        # make all reads are visible so that the successful acquirement assures
         #  that potential memory operations are visible to this process
+        if pymembar is not None:
+            pymembar.rmb()
 
         return True
 
@@ -519,10 +532,12 @@ class ShmLock(ShmModuleBaseLogger):
             if the lock could not be released properly
         """
 
-        # TODO: wmb(); make all write visible before release. This might not be
+        # make all write visible before release. This might not be
         # necessary on all architectures, but it's a good practice to ensure
         # that all writes are visible to other processes before releasing the
         # lock.
+        if pymembar is not None:
+            pymembar.wmb()
 
         try:
             if self._config.pid != os.getpid():
