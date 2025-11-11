@@ -23,6 +23,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
+          pip install -r requirements-optional.txt
       - name: Run Tests from local files
         run: |
           python -m coverage run -m unittest discover
@@ -48,6 +49,7 @@ jobs:
       - name: Install shmlock and dependencies
         run: |
           pip install . -r requirements.txt
+          pip install -r requirements-optional.txt
       - name: Run Examples from installed package
         run: |
           python ./examples/performance_analysis/run_perf.py
@@ -65,34 +67,9 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
+          pip install -r requirements-optional.txt
       - name: Run pylint
         run: |
           pylint --rcfile=.pylintrc tests
           pylint --rcfile=.pylintrc shmlock
           pylint --rcfile=.pylintrc examples
-
-  ExamplesWithMemoryBarrier:
-    # excludes arm TODO should be integrated nicer
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: [3.8.*, 3.9.*, 3.10.*, 3.11.*, 3.12.*, 3.13.*]
-    steps:
-      - uses: actions/checkout@v4
-      - name: Python example execution
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Install Windows-specific requirements
-        if: runner.os == 'Windows'
-        run: |
-          pip install -r requirements_win.txt
-      - name: Install shmlock and dependencies
-        run: |
-          pip install . -r requirements.txt
-          pip install -r requirements-optional.txt
-      - name: Run Examples from installed package
-        run: |
-          python ./examples/performance_analysis/run_perf.py
-          python ./examples/performance_analysis/run_poll_perf.py
