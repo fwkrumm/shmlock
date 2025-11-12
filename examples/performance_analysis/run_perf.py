@@ -202,6 +202,12 @@ def worker_different_locks(test_type: str,
                                    poll_interval=SHM_LOCK_POLL_INTERVAL,
                                    logger=log,
                                    track=False if sys.version_info >= (3, 13) else None)
+        elif test_type == "shmlock_with_memory_barrier":
+            lock = shmlock.ShmLock(lock_name,
+                                   poll_interval=SHM_LOCK_POLL_INTERVAL,
+                                   logger=log,
+                                   track=False if sys.version_info >= (3, 13) else None,
+                                   memory_barrier=True)
         elif test_type == "filelock":
             lock = filelock.FileLock(lock_name)
         elif test_type == "zmq":
@@ -260,6 +266,7 @@ if __name__ == "__main__":
         for TEST_TYPE in ("no_lock",
                           "zmq",
                           "shmlock",
+                          "shmlock_with_memory_barrier",
                           "filelock"):
 
             log.info("Running test type %s", TEST_TYPE)

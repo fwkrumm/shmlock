@@ -76,6 +76,7 @@ class ShmLock(ShmModuleBaseLogger):
                  poll_interval: Union[float, int] = 0.05,
                  logger: logging.Logger = None,
                  exit_event: Union[multiprocessing.synchronize.Event, threading.Event] = None,
+                 memory_barrier: bool = False,
                  track: bool = None):
         """
         default init. set shared memory name (for lock) and poll_interval.
@@ -124,7 +125,8 @@ class ShmLock(ShmModuleBaseLogger):
                                           ExitEventMock(),
                                      track=None,
                                      uuid=ShmUuid(),
-                                     pid=os.getpid())
+                                     pid=os.getpid(),
+                                     memory_barrier=False)
 
         if track is not None:
             # track parameter not supported for python < 3.13
@@ -132,6 +134,13 @@ class ShmLock(ShmModuleBaseLogger):
                 raise ValueError("track parameter has been set but it is only supported for "\
                                  "python >= 3.13")
             self._config.track = bool(track)
+
+        if memory_barrier:
+            if membar is None:
+                raise exceptions.ShmLockRuntimeError("memory_barrier parameter set to True but "\
+                    "membar module could not be imported. Install membar module or set "\
+                    "memory_barrier to False.")
+            self._config.memory_barrier = True
 
         self.debug("lock %s initialized.", self)
 
@@ -371,7 +380,7 @@ class ShmLock(ShmModuleBaseLogger):
 
         # make all reads are visible so that the successful acquirement assures
         #  that potential memory operations are visible to this process
-        if membar is not None:
+        if self._config.memory_barrier:
             membar.rmb()
 
         return True
@@ -536,7 +545,7 @@ class ShmLock(ShmModuleBaseLogger):
         # necessary on all architectures, but it's a good practice to ensure
         # that all writes are visible to other processes before releasing the
         # lock.
-        if membar is not None:
+        if self._config.memory_barrier:
             membar.wmb()
 
         try:

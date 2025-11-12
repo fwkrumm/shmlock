@@ -101,4 +101,5 @@ class ShmLockConfig(): # pylint: disable=(too-many-instance-attributes)
     pid: int # process id of the lock instance (should stay the same as
              # long as the user does not share the lock via forking which is
              # STRONGLY DISCOURAGED!)
+    memory_barrier: bool # whether to use memory barriers when accessing shared memory
     description: str = "" # custom description
