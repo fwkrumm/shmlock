@@ -26,9 +26,6 @@ try:
 except ImportError:
     # module not found; warn user that memory barriers will not be used
     # however this might be intentional; currently there is not parameter for this
-    warnings.warn("membar module not found. Memory barriers will not be used. "
-                  "This might lead to unexpected behavior on some architectures.",
-                  stacklevel=2)
     membar = None
 
 __all__ = ["ShmLock",
@@ -43,7 +40,14 @@ from shmlock.shmlock_monkey_patch import remove_shm_from_resource_tracker
 from shmlock.shmlock_base_logger import ShmModuleBaseLogger, create_logger
 from shmlock.shmlock_uuid import ShmUuid
 from shmlock.shmlock_config import ShmLockConfig, ExitEventMock
-from shmlock.shmlock_warnings import ShmLockDanglingSharedMemoryWarning
+from shmlock.shmlock_warnings import ShmLockDanglingSharedMemoryWarning, \
+                                     ShmMemoryBarrierMissingWarning
+
+if membar is None:
+    warnings.warn("membar module not found. Memory barriers will not be used. "
+                  "This might lead to unexpected behavior on some architectures.",
+                  ShmMemoryBarrierMissingWarning,
+                  stacklevel=2)
 
 
 if os.name == "nt":
@@ -127,10 +131,6 @@ class ShmLock(ShmModuleBaseLogger):
                                      uuid=ShmUuid(),
                                      pid=os.getpid(),
                                      memory_barrier=False)
-
-        # check parameters; check after creation of config since otherwise there might occur
-        # attribute errors in the destructor
-        self._config.check_parameters()
 
         if track is not None:
             # track parameter not supported for python < 3.13
@@ -549,8 +549,13 @@ class ShmLock(ShmModuleBaseLogger):
         # necessary on all architectures, but it's a good practice to ensure
         # that all writes are visible to other processes before releasing the
         # lock.
-        if self._config.memory_barrier:
-            membar.wmb()
+        try:
+            if self._config.memory_barrier:
+                membar.wmb()
+        except AttributeError:
+            # if exception is thrown before config has been defined during __init__ e.g. due to
+            # failed type check
+            pass
 
         try:
             if self._config.pid != os.getpid():

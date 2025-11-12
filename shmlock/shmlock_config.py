@@ -9,7 +9,6 @@ from dataclasses import dataclass
 from typing import Union
 
 from shmlock.shmlock_uuid import ShmUuid
-from shmlock.shmlock_exceptions import ShmLockValueError
 
 class ExitEventMock():
     """
@@ -103,21 +102,3 @@ class ShmLockConfig(): # pylint: disable=(too-many-instance-attributes)
              # STRONGLY DISCOURAGED!)
     memory_barrier: bool # whether to use memory barriers when accessing shared memory
     description: str = "" # custom description
-
-    def check_parameters(self):
-        """
-        type check the parameters of the config dataclass
-        """
-        if (not isinstance(self.poll_interval, (float, int,))) or self.poll_interval <= 0:
-            raise ShmLockValueError("poll_interval must be a float or int and > 0")
-
-        if not isinstance(self.name, str):
-            raise ShmLockValueError("lock name must be a string")
-
-        if self.exit_event and \
-            not isinstance(self.exit_event, (multiprocessing.synchronize.Event, threading.Event,)):
-            raise ShmLockValueError("exit_event must be a multiprocessing.Event "\
-                                               "or thrading.Event")
-
-        if not self.name:
-            raise ShmLockValueError("lock name must not be empty")

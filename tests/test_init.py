@@ -90,7 +90,7 @@ class InitTest(unittest.TestCase):
             timeout=1.0,
             uuid=uuid,
             pid=1,
-            memory_barrier=True,
+            memory_barrier=False,
             description="description"
         )
         self.assertEqual(config.name, "test")
