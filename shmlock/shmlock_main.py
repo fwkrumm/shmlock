@@ -128,6 +128,10 @@ class ShmLock(ShmModuleBaseLogger):
                                      pid=os.getpid(),
                                      memory_barrier=False)
 
+        # check parameters; check after creation of config since otherwise there might occur
+        # attribute errors in the destructor
+        self._config.check_parameters()
+
         if track is not None:
             # track parameter not supported for python < 3.13
             if sys.version_info < (3, 13):
