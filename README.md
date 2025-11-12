@@ -50,6 +50,7 @@ This module has no additional dependencies. There are several ways to install it
 
 1. Via the Python Package Index (available from version 3.0.0 onward; older versions can be accessed through git tags):
 `pip install shmlock[membar]`
+`pip install shmlock[membar] --extra-index-url https://test.pypi.org/simple/`
 The optional `[membar]` installs the `membar` (memory barrier) module. If you do not need this feature, you can simply install via `pip install shmlock`.
 
 2. Install directly from the repository:
