@@ -151,6 +151,9 @@ import logging
 logger = shmlock.create_logger(name="shmlogger", level=logging.DEBUG) # also check doc-string
 lock_with_logger = shmlock.ShmLock("shm_lock", logger=logger)
 
+# on some architectures (e.g. ARM) you might want to enable memory barriers to
+# ensure correct ordering of operations.
+lock_with_membar = shmlock.ShmLock("shm_lock_membar", memory_barrier=True)
 ```
 
 ### Real-world Example
