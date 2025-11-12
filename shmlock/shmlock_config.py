@@ -111,13 +111,13 @@ class ShmLockConfig(): # pylint: disable=(too-many-instance-attributes)
         if (not isinstance(self.poll_interval, (float, int,))) or self.poll_interval <= 0:
             raise exceptions.ShmLockValueError("poll_interval must be a float or int and > 0")
 
-        if not isinstance(self.lock_name, str):
-            raise exceptions.ShmLockValueError("lock_name must be a string")
+        if not isinstance(self.name, str):
+            raise exceptions.ShmLockValueError("lock name must be a string")
 
         if self.exit_event and \
             not isinstance(self.exit_event, (multiprocessing.synchronize.Event, threading.Event,)):
             raise exceptions.ShmLockValueError("exit_event must be a multiprocessing.Event "\
                                                "or thrading.Event")
 
-        if not self.lock_name:
-            raise exceptions.ShmLockValueError("lock_name must not be empty")
+        if not self.name:
+            raise exceptions.ShmLockValueError("lock name must not be empty")
