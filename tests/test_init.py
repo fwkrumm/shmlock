@@ -90,6 +90,7 @@ class InitTest(unittest.TestCase):
             timeout=1.0,
             uuid=uuid,
             pid=1,
+            memory_barrier=True,
             description="description"
         )
         self.assertEqual(config.name, "test")
@@ -99,6 +100,7 @@ class InitTest(unittest.TestCase):
         self.assertEqual(config.timeout, 1.0)
         self.assertEqual(config.uuid, uuid)
         self.assertEqual(config.pid, 1)
+        self.assertEqual(config.memory_barrier, False)
         self.assertEqual(config.description, "description")
 
 

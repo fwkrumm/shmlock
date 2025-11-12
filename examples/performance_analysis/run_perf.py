@@ -203,6 +203,12 @@ def worker_different_locks(test_type: str,
                                    logger=log,
                                    track=False if sys.version_info >= (3, 13) else None)
         elif test_type == "shmlock_with_memory_barrier":
+            try:
+                import membar # pylint: disable=(import-outside-toplevel)
+            except ImportError:
+                # make sure example runs even if memory barrier dependency is missing
+                log.error("membar module not found, cannot run shmlock with memory barrier")
+                return
             lock = shmlock.ShmLock(lock_name,
                                    poll_interval=SHM_LOCK_POLL_INTERVAL,
                                    logger=log,

@@ -1,9 +1,6 @@
-name: Publish PyPI
+name: Publish Test PyPI
 
-on:
-  push:
-    branches:
-      - master
+on: [push]
 
 # Limit token permissions
 permissions:
@@ -37,7 +34,7 @@ jobs:
 
       - name: Publish to PyPI
         run: |
-          twine upload dist/* || { echo "::error:: ❌ Error: Upload failed. Possibly because the version already exists."; exit 1; }
+          twine upload --repository-url https://test.pypi.org/legacy/ dist/*|| { echo "::error:: ❌ Error: Upload failed. Possibly because the version already exists."; exit 1; }
         env:
           TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN_ENV }}
+          TWINE_PASSWORD: ${{ secrets.PYPI_TEST_API_TOKEN_ENV }}
