@@ -1,4 +1,4 @@
-name: CI_ShmLock
+name: arm-no-gil-test
 
 on: [push, pull_request]
 
