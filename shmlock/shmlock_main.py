@@ -43,12 +43,6 @@ from shmlock.shmlock_config import ShmLockConfig, ExitEventMock
 from shmlock.shmlock_warnings import ShmLockDanglingSharedMemoryWarning, \
                                      ShmMemoryBarrierMissingWarning
 
-if membar is None:
-    warnings.warn("membar module not found. Memory barriers will not be used. "
-                  "This might lead to unexpected behavior on some architectures.",
-                  ShmMemoryBarrierMissingWarning,
-                  stacklevel=2)
-
 
 if os.name == "nt":
     try:
@@ -141,10 +135,12 @@ class ShmLock(ShmModuleBaseLogger):
 
         if memory_barrier:
             if membar is None:
-                raise exceptions.ShmLockRuntimeError("memory_barrier parameter set to True but "\
-                    "membar module could not be imported. Install membar module or set "\
-                    "memory_barrier to False.")
-            self._config.memory_barrier = True
+                warnings.warn("membar module not found. Memory barriers will not be used. "
+                  "This might lead to unexpected behavior on some architectures (e.g. ARM).",
+                  ShmMemoryBarrierMissingWarning,
+                  stacklevel=2)
+            else:
+                self._config.memory_barrier = True
 
         self.debug("lock %s initialized.", self)
 
@@ -544,20 +540,13 @@ class ShmLock(ShmModuleBaseLogger):
         RuntimeError
             if the lock could not be released properly
         """
-
-        # make all write visible before release. This might not be
-        # necessary on all architectures, but it's a good practice to ensure
-        # that all writes are visible to other processes before releasing the
-        # lock.
         try:
             if self._config.memory_barrier:
+                # make all write visible before release. This might not be
+                # necessary on all architectures, but it's a good practice to ensure
+                # that all writes are visible to other processes before releasing the
+                # lock.
                 membar.wmb()
-        except AttributeError:
-            # if exception is thrown before config has been defined during __init__ e.g. due to
-            # failed type check
-            pass
-
-        try:
             if self._config.pid != os.getpid():
                 raise exceptions.ShmLockRuntimeError(f"lock {self} has been created in another "\
                                                     "process and cannot be used in this process. "\
