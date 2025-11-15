@@ -158,6 +158,11 @@ lock_with_logger = shmlock.ShmLock("shm_lock", logger=logger)
 # on some architectures (e.g. ARM) you might want to enable memory barriers to
 # ensure correct ordering of operations.
 lock_with_membar = shmlock.ShmLock("shm_lock_membar", memory_barrier=True)
+
+# the following lock will block SIGINT and SIGTERM signals during shared memory allocation
+# to prevent dangling shared memory in case of abrupt process termination.
+# NOTE that this will not work for process terminations.
+lock_which_overwrites_signals = shmlock.ShmLock("shm_lock_signals", block_signals=True)
 ```
 
 ### Real-world Example
