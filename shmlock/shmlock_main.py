@@ -135,10 +135,10 @@ class ShmLock(ShmModuleBaseLogger):
 
         if memory_barrier:
             if membar is None:
-                warnings.warn("membar module not found. Memory barriers will not be used. "
-                  "This might lead to unexpected behavior on some architectures (e.g. ARM).",
-                  ShmMemoryBarrierMissingWarning,
-                  stacklevel=2)
+                msg = "membar module not found. Memory barriers will not be used. " \
+                      "This might lead to unexpected behavior on some architectures (e.g. ARM)."
+                self.error(msg)
+                warnings.warn(msg, ShmMemoryBarrierMissingWarning, stacklevel=2)
             else:
                 self._config.memory_barrier = True
 
@@ -301,14 +301,15 @@ class ShmLock(ShmModuleBaseLogger):
                     # dangling shared memory block. This is only the case if the process is
                     # interrupted somewhere within the shared memory creation process within the
                     # multiprocessing library.
-                    warnings.warn("KeyboardInterrupt: process interrupted while trying to "\
-                                f"acquire lock {self}. This might lead to leaking resources. "\
-                                "shared memory variable is " \
-                                f"""{getattr(self._shm, "shm", None)}. """ \
-                                "Try to use the query_for_error_after_interrupt() function to " \
-                                "check shared memory integrity. Make sure other processes "\
-                                "are still able to acquire the lock.",
-                                ShmLockDanglingSharedMemoryWarning)
+                    msg = "KeyboardInterrupt: process interrupted while trying to "\
+                         f"acquire lock {self}. This might lead to leaking resources. "\
+                          "shared memory variable is " \
+                         f"""{getattr(self._shm, "shm", None)}. """ \
+                          "Try to use the query_for_error_after_interrupt() function to " \
+                          "check shared memory integrity. Make sure other processes "\
+                          "are still able to acquire the lock."
+                    self.error(msg)
+                    warnings.warn(msg, ShmLockDanglingSharedMemoryWarning, stacklevel=2)
 
                     # raise keyboardinterrupt to stop the process; release() will clean up.
                     raise KeyboardInterrupt("ctrl+c") from err
