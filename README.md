@@ -22,7 +22,9 @@ Feel free to provide constructive feedback, suggestions, or feature requests. Th
 This module is currently under development and may undergo frequent changes on the master branch.
 It is recommended to use a static version for testing.
 
-This module provides an inter-process lock implementation, eliminating the need to pass around objects for synchronization. Designed for seamless integration across multiple terminals or consoles, it enables reliable process locking simply by referencing a shared name identifier. Under the hood, the module leverages Python’s `multiprocessing.shared_memory`.
+This module provides an inter-process lock implementation (named semaphore), eliminating the need to pass around objects for synchronization.
+Designed for seamless integration across multiple terminals or consoles, it enables reliable process locking simply by referencing a shared name identifier.
+Under the hood, the module leverages Python’s `multiprocessing.shared_memory`.
 In real-world scenarios, a lock is used to synchronize access to shared resources across multiple Python instances, such as different terminals.
 Notable examples include a file or a shared memory block, which may be modified by multiple actors; see the real-world example in Section [Quick Dive](#quick-dive) and comments therein for more details.
 
@@ -31,15 +33,13 @@ Notable examples include a file or a shared memory block, which may be modified 
 <a id="pros-and-cons-when-to-use-this-module-and-when-not-to"></a>
 ## Pros and Cons: When to Use This Module and When Not To
 
-| When to Use | When Not to Use |
-|-------------|-----------------|
-| You want a lock without passing lock objects around | You do not want a lock that uses a polling interval (i.e. a sleep interval) |
-| You need a simple locking mechanism | You require very high performance and a large number of acquisitions |
-| You want to avoid file-based or server-client-based locks (like filelock, Redis, pyzmq, etc.) | You are not comfortable using shared memory as a lock mechanism |
-| You do not want the lock to add dependencies to your project (despite pywin32 on Windows optionally)|   |
+This module is ideal when you need a simple locking mechanism without the overhead of passing lock objects between processes. It excels in scenarios where you want to avoid file-based or server-client-based locks (such as filelock, Redis, or pyzmq) and prefer a lightweight solution with minimal dependencies (aside from pywin32 on Windows, which is optional).
 
+However, this module may not be suitable if you require very high performance with a large number of lock acquisitions, as it relies on a polling interval (i.e., a sleep interval) for synchronization. Additionally, if you are uncomfortable using shared memory as the underlying lock mechanism, alternative solutions might be more appropriate.
 
-So if you chose to use this module it is best to keep the number of synchronized accesses not too high.
+**Note:** Process interruptions (SIGINT/SIGTERM) during shmlock acquisition may lead to dangling shared memory. This is a known limitation of the underlying shared memory mechanism. For details on handling such scenarios, refer to the [Troubleshooting and Known Issues](#troubleshooting-and-known-issues) section.
+
+In summary, this module works best when the number of synchronized accesses remains moderate rather than extremely high and the starting/stopping of processes is well controlled.
 
 ---
 <a name="installation"></a>
@@ -48,8 +48,13 @@ So if you chose to use this module it is best to keep the number of synchronized
 
 This module has no additional dependencies. There are several ways to install it:
 
-1. Via the Python Package Index (available from version 3.0.0 onward; older versions can be accessed through git tags):
-`pip install shmlock`
+1. Via the Python Package Index (available from version 3.0.0 onward; older versions can be accessed through git tags, see point 2. and 3. below):
+
+```
+pip install shmlock[membar]
+```
+
+The optional `[membar]` installs the `membar` (memory barrier) module. If you do not need this feature, you can simply install via `pip install shmlock`.
 
 2. Install directly from the repository:
 `pip install git+https://github.com/fwkrumm/shmlock@master`
@@ -150,6 +155,9 @@ import logging
 logger = shmlock.create_logger(name="shmlogger", level=logging.DEBUG) # also check doc-string
 lock_with_logger = shmlock.ShmLock("shm_lock", logger=logger)
 
+# on some architectures (e.g. ARM) you might want to enable memory barriers to
+# ensure correct ordering of operations.
+lock_with_membar = shmlock.ShmLock("shm_lock_membar", memory_barrier=True)
 ```
 
 ### Real-world Example
@@ -418,10 +426,12 @@ To ensure safe cleanup, consider alternatives such as `atexit`, `signal.signal`,
 | 4.2.2                      | Added workflow permissions. |
 | 4.2.3                      | Moved pull request template to correct location in .github folder. |
 | 4.2.4                      | Minor correction to readme. |
+| 4.3.0                      | Added memory barrier and minor additions to readme. |
 
 ---
 <a name="todos"></a>
 <a id="todos"></a>
 ## ToDos
 
-- TBD
+- check if optional membar dependency is correctly shown in pypi header install command
+- (?) temporarily overwrite signal handlers during acquirement to prevent SIGINT/SIGTERM during acquirement

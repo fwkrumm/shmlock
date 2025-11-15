@@ -20,6 +20,14 @@ import weakref
 import atexit
 import gc
 
+try:
+    # try import memory barrier module
+    import membar
+except ImportError:
+    # module not found; warn user that memory barriers will not be used
+    # however this might be intentional; currently there is not parameter for this
+    membar = None
+
 __all__ = ["ShmLock",
            "remove_shm_from_resource_tracker",
            "exceptions",
@@ -32,7 +40,8 @@ from shmlock.shmlock_monkey_patch import remove_shm_from_resource_tracker
 from shmlock.shmlock_base_logger import ShmModuleBaseLogger, create_logger
 from shmlock.shmlock_uuid import ShmUuid
 from shmlock.shmlock_config import ShmLockConfig, ExitEventMock
-from shmlock.shmlock_warnings import ShmLockDanglingSharedMemoryWarning
+from shmlock.shmlock_warnings import ShmLockDanglingSharedMemoryWarning, \
+                                     ShmMemoryBarrierMissingWarning
 
 
 if os.name == "nt":
@@ -65,6 +74,7 @@ class ShmLock(ShmModuleBaseLogger):
                  poll_interval: Union[float, int] = 0.05,
                  logger: logging.Logger = None,
                  exit_event: Union[multiprocessing.synchronize.Event, threading.Event] = None,
+                 memory_barrier: bool = False,
                  track: bool = None):
         """
         default init. set shared memory name (for lock) and poll_interval.
@@ -84,6 +94,10 @@ class ShmLock(ShmModuleBaseLogger):
             if None is provided a simple sleep will be used. if the exit event is set, the
             acquirement will stop and it will not be possible to acquire a lock until event is
             unset/cleared, by default None
+        memory_barrier : bool, optional
+            if True memory barriers will be used to ensure memory visibility across processes.
+            This requires the membar module to be installed. If membar module is not found
+            a warning is raised and memory barriers will not be used, by default False
         track : bool, optional
             set to False if you do want the shared memory block been tracked.
             This is parameter only supported for python >= 3.13 in SharedMemory
@@ -113,7 +127,8 @@ class ShmLock(ShmModuleBaseLogger):
                                           ExitEventMock(),
                                      track=None,
                                      uuid=ShmUuid(),
-                                     pid=os.getpid())
+                                     pid=os.getpid(),
+                                     memory_barrier=False)
 
         if track is not None:
             # track parameter not supported for python < 3.13
@@ -121,6 +136,15 @@ class ShmLock(ShmModuleBaseLogger):
                 raise ValueError("track parameter has been set but it is only supported for "\
                                  "python >= 3.13")
             self._config.track = bool(track)
+
+        if memory_barrier:
+            if membar is None:
+                msg = "membar module not found. Memory barriers will not be used. " \
+                      "This might lead to unexpected behavior on some architectures (e.g. ARM)."
+                self.error(msg)
+                warnings.warn(msg, ShmMemoryBarrierMissingWarning, stacklevel=2)
+            else:
+                self._config.memory_barrier = True
 
         self.debug("lock %s initialized.", self)
 
@@ -281,14 +305,15 @@ class ShmLock(ShmModuleBaseLogger):
                     # dangling shared memory block. This is only the case if the process is
                     # interrupted somewhere within the shared memory creation process within the
                     # multiprocessing library.
-                    warnings.warn("KeyboardInterrupt: process interrupted while trying to "\
-                                f"acquire lock {self}. This might lead to leaking resources. "\
-                                "shared memory variable is " \
-                                f"""{getattr(self._shm, "shm", None)}. """ \
-                                "Try to use the query_for_error_after_interrupt() function to " \
-                                "check shared memory integrity. Make sure other processes "\
-                                "are still able to acquire the lock.",
-                                ShmLockDanglingSharedMemoryWarning)
+                    msg = "KeyboardInterrupt: process interrupted while trying to "\
+                         f"acquire lock {self}. This might lead to leaking resources. "\
+                          "shared memory variable is " \
+                         f"""{getattr(self._shm, "shm", None)}. """ \
+                          "Try to use the query_for_error_after_interrupt() function to " \
+                          "check shared memory integrity. Make sure other processes "\
+                          "are still able to acquire the lock."
+                    self.error(msg)
+                    warnings.warn(msg, ShmLockDanglingSharedMemoryWarning, stacklevel=2)
 
                     # raise keyboardinterrupt to stop the process; release() will clean up.
                     raise KeyboardInterrupt("ctrl+c") from err
@@ -357,6 +382,11 @@ class ShmLock(ShmModuleBaseLogger):
         # still being None but shared memory being created?
         assert self._shm.shm is not None, "self._shm.shm is None without exception being raised. "\
             "This should not happen!"
+
+        # ensure all reads are visible so that the successful acquirement assures
+        #  that potential memory operations are visible to this process
+        if self._config.memory_barrier:
+            membar.rmb()
 
         return True
 
@@ -515,8 +545,13 @@ class ShmLock(ShmModuleBaseLogger):
         RuntimeError
             if the lock could not be released properly
         """
-
         try:
+            if self._config.memory_barrier:
+                # ensure all writes are visible before release. This might not be
+                # necessary on all architectures, but it's a good practice to ensure
+                # that all writes are visible to other processes before releasing the
+                # lock.
+                membar.wmb()
             if self._config.pid != os.getpid():
                 raise exceptions.ShmLockRuntimeError(f"lock {self} has been created in another "\
                                                     "process and cannot be used in this process. "\

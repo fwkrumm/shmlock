@@ -5,7 +5,7 @@ on:
     branches:
       - master
 
-# Limit GITHUB_TOKEN permissions
+# Limit token permissions
 permissions:
   contents: read
 
