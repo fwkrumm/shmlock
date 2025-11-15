@@ -102,7 +102,8 @@ class ShmLock(ShmModuleBaseLogger):
         block_signals : bool, optional
             if True SIGINT and SIGTERM signals will be blocked during shared memory
             creation to prevent dangling shared memory in case the process is interrupted.
-            Note that this will not work if the process is terminated, by default False
+            Note that, depending on the platform, this will not work if the process is
+            terminated, by default False
         track : bool, optional
             set to False if you do want the shared memory block been tracked.
             This is parameter only supported for python >= 3.13 in SharedMemory
