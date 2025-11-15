@@ -99,6 +99,9 @@ class ShmLock(ShmModuleBaseLogger):
             if True memory barriers will be used to ensure memory visibility across processes.
             This requires the membar module to be installed. If membar module is not found
             a warning is raised and memory barriers will not be used, by default False
+        block_signals : bool, optional
+            if True SIGINT and SIGTERM signals will be blocked during shared memory
+            creation to prevent dangling shared memory in case the process is interrupted
         track : bool, optional
             set to False if you do want the shared memory block been tracked.
             This is parameter only supported for python >= 3.13 in SharedMemory
@@ -370,9 +373,14 @@ class ShmLock(ShmModuleBaseLogger):
                 try:
                     old_signal_handlers[sig] = signal.getsignal(sig)
                     signal.signal(sig, self.ignore_signals)
-                except Exception:
+                    self.debug("blocked signal %s during shared memory creation. Note that if "\
+                               "you add any signals during this lock acquirement within this "\
+                               "process, this will be reverted after shared memory creation.", sig)
+                except Exception as err:
                     # signal cannot be caught/ignored on this platform
-                    self.warning("could not block signal %s on this platform", sig)
+                    msg = f"could not block signal {sig} on this platform"
+                    self.error(msg)
+                    raise exceptions.ShmLockSignalOverwriteFailed(msg) from err
 
         if self._config.track is not None:
             # disable unexpected keyword argument warning because track parameter is only
@@ -392,9 +400,12 @@ class ShmLock(ShmModuleBaseLogger):
             for sig, handler in old_signal_handlers.items():
                 try:
                     signal.signal(sig, handler)
-                except Exception:
-                    self.warning("could not restore signal handler for signal %s on this platform",
-                                 sig)
+                    self.debug("restored signal handler for signal %s after shared memory "\
+                               "creation", sig)
+                except Exception as err:
+                    msg = f"could not restore signal handler for signal {sig} on this platform"
+                    self.error(msg)
+                    raise exceptions.ShmLockSignalOverwriteFailed(msg) from err
 
         # NOTE: shared memory is after creation(!) not filled with the uuid data in
         # the same operation. so it MIGHT be possible that the shm block has been

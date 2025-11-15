@@ -434,5 +434,4 @@ To ensure safe cleanup, consider alternatives such as `atexit`, `signal.signal`,
 <a id="todos"></a>
 ## ToDos
 
-- check if optional membar dependency is correctly shown in pypi header install command
-- (?) temporarily overwrite signal handlers during acquirement to prevent SIGINT/SIGTERM during acquirement
+- fix that optional parameter [membar] now shown on pypi page
