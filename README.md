@@ -433,6 +433,5 @@ To ensure safe cleanup, consider alternatives such as `atexit`, `signal.signal`,
 <a id="todos"></a>
 ## ToDos
 
-- add membar to optional build dependencies in pyproject.toml etc.
-- rework advantages/disadvantages section; also add phrase named semaphore
+- check if optional membar dependency is correctly shown in pypi header install command
 - (?) temporarily overwrite signal handlers during acquirement to prevent SIGINT/SIGTERM during acquirement
