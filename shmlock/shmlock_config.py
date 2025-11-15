@@ -10,6 +10,7 @@ from typing import Union
 
 from shmlock.shmlock_uuid import ShmUuid
 
+
 class ExitEventMock():
     """
     mock class for exit event if not desired by user. Note that this is not thread-safe or
