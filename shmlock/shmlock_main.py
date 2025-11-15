@@ -94,6 +94,10 @@ class ShmLock(ShmModuleBaseLogger):
             if None is provided a simple sleep will be used. if the exit event is set, the
             acquirement will stop and it will not be possible to acquire a lock until event is
             unset/cleared, by default None
+        memory_barrier : bool, optional
+            if True memory barriers will be used to ensure memory visibility across processes.
+            This requires the membar module to be installed. If membar module is not found
+            a warning is raised and memory barriers will not be used, by default False
         track : bool, optional
             set to False if you do want the shared memory block been tracked.
             This is parameter only supported for python >= 3.13 in SharedMemory
@@ -379,7 +383,7 @@ class ShmLock(ShmModuleBaseLogger):
         assert self._shm.shm is not None, "self._shm.shm is None without exception being raised. "\
             "This should not happen!"
 
-        # make all reads are visible so that the successful acquirement assures
+        # ensure all reads are visible so that the successful acquirement assures
         #  that potential memory operations are visible to this process
         if self._config.memory_barrier:
             membar.rmb()
@@ -543,7 +547,7 @@ class ShmLock(ShmModuleBaseLogger):
         """
         try:
             if self._config.memory_barrier:
-                # make all write visible before release. This might not be
+                # ensure all writes are visible before release. This might not be
                 # necessary on all architectures, but it's a good practice to ensure
                 # that all writes are visible to other processes before releasing the
                 # lock.
