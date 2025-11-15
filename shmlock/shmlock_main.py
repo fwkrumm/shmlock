@@ -375,9 +375,7 @@ class ShmLock(ShmModuleBaseLogger):
                 try:
                     old_signal_handlers[sig] = signal.getsignal(sig)
                     signal.signal(sig, self.ignore_signals)
-                    self.debug("blocked signal %s during shared memory creation. Note that if "\
-                               "you add any signals during this lock acquirement within this "\
-                               "process, this will be reverted after shared memory creation.", sig)
+                    self.debug("blocked signal %s during shared memory creation.", sig)
                 except Exception as err:
                     # signal cannot be caught/ignored on this platform
                     msg = f"could not block signal {sig} on this platform"
@@ -754,7 +752,7 @@ class ShmLock(ShmModuleBaseLogger):
             if shm is not None:
                 shm.close()
 
-    def ignore_signals(self, signum, frame):
+    def ignore_signals(self, signum, frame): # pylint: disable=(unused-argument)
         """
         function called as alias for SIGINT and SIGTERM if parameter set accordingly
 
@@ -762,7 +760,7 @@ class ShmLock(ShmModuleBaseLogger):
         ----------
         signum : int
             number of signal
-        frame : frame
+        _ : frame
             frame of signal
         """
         self.info("ignoring signal %s SIGINT and SIGTERM for lock %s", signum, self)
