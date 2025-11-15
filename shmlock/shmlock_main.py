@@ -369,7 +369,7 @@ class ShmLock(ShmModuleBaseLogger):
             for sig in [signal.SIGINT, signal.SIGTERM]:
                 try:
                     old_signal_handlers[sig] = signal.getsignal(sig)
-                    signal.signal(sig, signal.SIG_IGN)
+                    signal.signal(sig, self.ignore_signals)
                 except Exception:
                     # signal cannot be caught/ignored on this platform
                     self.warning("could not block signal %s on this platform", sig)
@@ -740,6 +740,19 @@ class ShmLock(ShmModuleBaseLogger):
         finally:
             if shm is not None:
                 shm.close()
+
+    def ignore_signals(self, signum, frame):
+        """
+        function called as alias for SIGINT and SIGTERM if parameter set accordingly
+
+        Parameters
+        ----------
+        signum : int
+            number of signal
+        frame : frame
+            frame of signal
+        """
+        self.info("ignoring signal %s SIGINT and SIGTERM for lock %s", signum, self)
 
     def add_exit_handlers(self,
                           register_atexit: bool = True,

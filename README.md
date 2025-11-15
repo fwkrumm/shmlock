@@ -427,6 +427,7 @@ To ensure safe cleanup, consider alternatives such as `atexit`, `signal.signal`,
 | 4.2.3                      | Moved pull request template to correct location in .github folder. |
 | 4.2.4                      | Minor correction to readme. |
 | 4.3.0                      | Added memory barrier and minor additions to readme. |
+| 4.4.0                      | Add possibility to disable SIGINT and SIGTERM during shared memroy allocation to prevent dangling shared memory. |
 
 ---
 <a name="todos"></a>
