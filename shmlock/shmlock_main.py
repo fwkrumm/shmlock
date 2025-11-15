@@ -75,6 +75,7 @@ class ShmLock(ShmModuleBaseLogger):
                  logger: logging.Logger = None,
                  exit_event: Union[multiprocessing.synchronize.Event, threading.Event] = None,
                  memory_barrier: bool = False,
+                 block_signals: bool = False,
                  track: bool = None):
         """
         default init. set shared memory name (for lock) and poll_interval.
@@ -128,7 +129,9 @@ class ShmLock(ShmModuleBaseLogger):
                                      track=None,
                                      uuid=ShmUuid(),
                                      pid=os.getpid(),
-                                     memory_barrier=False)
+                                     memory_barrier=False,
+                                     block_signals=block_signals
+                                     )
 
         if track is not None:
             # track parameter not supported for python < 3.13
@@ -358,6 +361,19 @@ class ShmLock(ShmModuleBaseLogger):
             raise exceptions.ShmLockRuntimeError(f"lock {self} seemingly already acquired by "\
                 f"this thread but uuid does not match (expected {self._config.uuid}, "\
                 f"got {self._shm.shm.buf[:LOCK_SHM_SIZE]}). This should not happen!")
+
+        if self._config.block_signals:
+            # block signals during shared memory creation to prevent dangling shared memory
+            # in case process is interrupted here
+            old_signal_handlers = {}
+            for sig in [signal.SIGINT, signal.SIGTERM]:
+                try:
+                    old_signal_handlers[sig] = signal.getsignal(sig)
+                    signal.signal(sig, signal.SIG_IGN)
+                except Exception:
+                    # signal cannot be caught/ignored on this platform
+                    self.warning("could not block signal %s on this platform", sig)
+
         if self._config.track is not None:
             # disable unexpected keyword argument warning because track parameter is only
             # supported for python >= 3.13. We check that in the constructor however
@@ -370,6 +386,15 @@ class ShmLock(ShmModuleBaseLogger):
             self._shm.shm = shared_memory.SharedMemory(name=self._config.name,
                                                        create=True,
                                                        size=LOCK_SHM_SIZE)
+
+        if self._config.block_signals:
+            # restore old signal handlers
+            for sig, handler in old_signal_handlers.items():
+                try:
+                    signal.signal(sig, handler)
+                except Exception:
+                    self.warning("could not restore signal handler for signal %s on this platform",
+                                 sig)
 
         # NOTE: shared memory is after creation(!) not filled with the uuid data in
         # the same operation. so it MIGHT be possible that the shm block has been
