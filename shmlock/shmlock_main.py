@@ -367,10 +367,11 @@ class ShmLock(ShmModuleBaseLogger):
                 f"this thread but uuid does not match (expected {self._config.uuid}, "\
                 f"got {self._shm.shm.buf[:LOCK_SHM_SIZE]}). This should not happen!")
 
+        old_signal_handlers = {}
         if self._config.block_signals:
             # block signals during shared memory creation to prevent dangling shared memory
             # in case process is interrupted here
-            old_signal_handlers = {}
+
             for sig in [signal.SIGINT, signal.SIGTERM]:
                 try:
                     old_signal_handlers[sig] = signal.getsignal(sig)
@@ -382,31 +383,32 @@ class ShmLock(ShmModuleBaseLogger):
                     self.error(msg)
                     raise exceptions.ShmLockSignalOverwriteFailed(msg) from err
 
-        if self._config.track is not None:
-            # disable unexpected keyword argument warning because track parameter is only
-            # supported for python >= 3.13. We check that in the constructor however
-            # pylint still reports it. There might be a better way to handle this?
-            self._shm.shm = shared_memory.SharedMemory(name=self._config.name, # pylint:disable=(unexpected-keyword-arg)
-                                                       create=True,
-                                                       size=LOCK_SHM_SIZE,
-                                                       track=self._config.track)
-        else:
-            self._shm.shm = shared_memory.SharedMemory(name=self._config.name,
-                                                       create=True,
-                                                       size=LOCK_SHM_SIZE)
-
-        if self._config.block_signals:
-            # restore old signal handlers
-            for sig, handler in old_signal_handlers.items():
-                try:
-                    signal.signal(sig, handler)
-                    self.debug("restored signal handler for signal %s after shared memory "\
-                               "creation", sig)
-                except Exception as err:
-                    msg = f"could not restore signal handler for signal {sig} on this platform. "\
-                          f"Exact error was {err}"
-                    self.error(msg)
-                    raise exceptions.ShmLockSignalOverwriteFailed(msg) from err
+        try:
+            if self._config.track is not None:
+                # disable unexpected keyword argument warning because track parameter is only
+                # supported for python >= 3.13. We check that in the constructor however
+                # pylint still reports it. There might be a better way to handle this?
+                self._shm.shm = shared_memory.SharedMemory(name=self._config.name, # pylint:disable=(unexpected-keyword-arg)
+                                                        create=True,
+                                                        size=LOCK_SHM_SIZE,
+                                                        track=self._config.track)
+            else:
+                self._shm.shm = shared_memory.SharedMemory(name=self._config.name,
+                                                        create=True,
+                                                        size=LOCK_SHM_SIZE)
+        finally:
+            if old_signal_handlers:
+                # restore old signal handlers
+                for sig, handler in old_signal_handlers.items():
+                    try:
+                        signal.signal(sig, handler)
+                        self.debug("restored signal handler for signal %s after shared memory "\
+                                "creation", sig)
+                    except Exception as err:
+                        msg = f"could not restore signal handler for signal {sig} on this platform. "\
+                            f"Exact error was {err}"
+                        self.error(msg)
+                        raise exceptions.ShmLockSignalOverwriteFailed(msg) from err
 
         # NOTE: shared memory is after creation(!) not filled with the uuid data in
         # the same operation. so it MIGHT be possible that the shm block has been
