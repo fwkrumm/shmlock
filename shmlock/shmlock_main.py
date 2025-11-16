@@ -75,6 +75,7 @@ class ShmLock(ShmModuleBaseLogger):
                  logger: logging.Logger = None,
                  exit_event: Union[multiprocessing.synchronize.Event, threading.Event] = None,
                  memory_barrier: bool = False,
+                 block_signals: bool = False,
                  track: bool = None):
         """
         default init. set shared memory name (for lock) and poll_interval.
@@ -98,6 +99,11 @@ class ShmLock(ShmModuleBaseLogger):
             if True memory barriers will be used to ensure memory visibility across processes.
             This requires the membar module to be installed. If membar module is not found
             a warning is raised and memory barriers will not be used, by default False
+        block_signals : bool, optional
+            if True SIGINT and SIGTERM signals will be blocked during shared memory
+            creation to prevent dangling shared memory in case the process is interrupted.
+            Note that, depending on the platform, this will not work if the process is
+            terminated, by default False
         track : bool, optional
             set to False if you do want the shared memory block been tracked.
             This is parameter only supported for python >= 3.13 in SharedMemory
@@ -128,7 +134,9 @@ class ShmLock(ShmModuleBaseLogger):
                                      track=None,
                                      uuid=ShmUuid(),
                                      pid=os.getpid(),
-                                     memory_barrier=False)
+                                     memory_barrier=False,
+                                     block_signals=block_signals
+                                     )
 
         if track is not None:
             # track parameter not supported for python < 3.13
@@ -358,18 +366,49 @@ class ShmLock(ShmModuleBaseLogger):
             raise exceptions.ShmLockRuntimeError(f"lock {self} seemingly already acquired by "\
                 f"this thread but uuid does not match (expected {self._config.uuid}, "\
                 f"got {self._shm.shm.buf[:LOCK_SHM_SIZE]}). This should not happen!")
-        if self._config.track is not None:
-            # disable unexpected keyword argument warning because track parameter is only
-            # supported for python >= 3.13. We check that in the constructor however
-            # pylint still reports it. There might be a better way to handle this?
-            self._shm.shm = shared_memory.SharedMemory(name=self._config.name, # pylint:disable=(unexpected-keyword-arg)
-                                                       create=True,
-                                                       size=LOCK_SHM_SIZE,
-                                                       track=self._config.track)
-        else:
-            self._shm.shm = shared_memory.SharedMemory(name=self._config.name,
-                                                       create=True,
-                                                       size=LOCK_SHM_SIZE)
+
+        old_signal_handlers = {}
+        if self._config.block_signals:
+            # block signals during shared memory creation to prevent dangling shared memory
+            # in case process is interrupted here
+
+            for sig in [signal.SIGINT, signal.SIGTERM]:
+                try:
+                    old_signal_handlers[sig] = signal.getsignal(sig)
+                    signal.signal(sig, self.ignore_signals)
+                    self.debug("blocked signal %s during shared memory creation.", sig)
+                except Exception as err:
+                    # signal cannot be caught/ignored on this platform
+                    msg = f"could not block signal {sig} on this platform. Exact error was {err}"
+                    self.error(msg)
+                    raise exceptions.ShmLockSignalOverwriteFailed(msg) from err
+
+        try:
+            if self._config.track is not None:
+                # disable unexpected keyword argument warning because track parameter is only
+                # supported for python >= 3.13. We check that in the constructor however
+                # pylint still reports it. There might be a better way to handle this?
+                self._shm.shm = shared_memory.SharedMemory(name=self._config.name, # pylint:disable=(unexpected-keyword-arg)
+                                                        create=True,
+                                                        size=LOCK_SHM_SIZE,
+                                                        track=self._config.track)
+            else:
+                self._shm.shm = shared_memory.SharedMemory(name=self._config.name,
+                                                        create=True,
+                                                        size=LOCK_SHM_SIZE)
+        finally:
+            if old_signal_handlers:
+                # restore old signal handlers
+                for sig, handler in old_signal_handlers.items():
+                    try:
+                        signal.signal(sig, handler)
+                        self.debug("restored signal handler for signal %s after shared memory "\
+                                "creation", sig)
+                    except Exception as err:
+                        msg = f"could not restore signal handler for signal {sig} on "\
+                              f"this platform. Exact error was {err}"
+                        self.error(msg)
+                        raise exceptions.ShmLockSignalOverwriteFailed(msg) from err
 
         # NOTE: shared memory is after creation(!) not filled with the uuid data in
         # the same operation. so it MIGHT be possible that the shm block has been
@@ -489,8 +528,8 @@ class ShmLock(ShmModuleBaseLogger):
                            "acquire lock %s. The shared memory block is PROBABLY "\
                            "dangling since for %s times no uuid has been "\
                            "written to the block. A manual clean up might be required, "\
-                           "i.e. on Linux you could try to attach and unlink. "\
-                           "On Windows all handles need to be closed.",
+                           "i.e. on Linux you could try to attach and unlink or delete "\
+                           "the mmap file in /dev/shm. On Windows all handles need to be closed.",
                            self,
                            number_of_checks)
                 raise exceptions.ShmLockDanglingSharedMemoryError("Potential "\
@@ -716,6 +755,20 @@ class ShmLock(ShmModuleBaseLogger):
             if shm is not None:
                 shm.close()
 
+    def ignore_signals(self, signum, frame): # pylint: disable=(unused-argument)
+        """
+        function called as alias for signals (currently SIGINT and SIGTERM) if parameter
+        set accordingly
+
+        Parameters
+        ----------
+        signum : int
+            number of signal
+        _ : frame
+            frame of signal
+        """
+        self.info("ignoring signal %s for lock %s", signum, self)
+
     def add_exit_handlers(self,
                           register_atexit: bool = True,
                           register_signal: bool = True,
@@ -778,9 +831,9 @@ class ShmLock(ShmModuleBaseLogger):
                 # only for windows systems which us necessary if a console is closed
                 def console_handler(ctrl_type):
                     if ctrl_type in (win32con.CTRL_C_EVENT,
-                                    win32con.CTRL_CLOSE_EVENT,
-                                    win32con.CTRL_LOGOFF_EVENT,
-                                    win32con.CTRL_SHUTDOWN_EVENT,):
+                                     win32con.CTRL_CLOSE_EVENT,
+                                     win32con.CTRL_LOGOFF_EVENT,
+                                     win32con.CTRL_SHUTDOWN_EVENT,):
                         self.release(force=True)
                         return True  # Prevent immediate termination if possible
                     return False  # Continue default behavior

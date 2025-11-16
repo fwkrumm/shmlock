@@ -158,6 +158,11 @@ lock_with_logger = shmlock.ShmLock("shm_lock", logger=logger)
 # on some architectures (e.g. ARM) you might want to enable memory barriers to
 # ensure correct ordering of operations.
 lock_with_membar = shmlock.ShmLock("shm_lock_membar", memory_barrier=True)
+
+# the following lock will block SIGINT and SIGTERM signals during shared memory allocation
+# to prevent dangling shared memory in case of abrupt process termination.
+# NOTE that this will, depending on the platform, not work for process terminations.
+lock_which_overwrites_signals = shmlock.ShmLock("shm_lock_signals", block_signals=True)
 ```
 
 ### Real-world Example
@@ -361,6 +366,8 @@ Please note that with Python version 3.13, there will be a "track" parameter for
 
 In short: Do not do that, there is always the risk for dangling shared memory. Make sure to release the lock properly. If this is not possible test with `add_exit_handlers(...)` function; cf. the text below.
 
+Starting from version 4.4.0, there is a parameter `block_signals` in the `ShmLock` constructor. If set to `True`, it will block `SIGINT` and `SIGTERM` signals during shared memory allocation to prevent dangling shared memory in case of abrupt process termination. Note that this will, depending on the platform, not work for process terminations.
+
 
 TLDR;
 
@@ -427,11 +434,11 @@ To ensure safe cleanup, consider alternatives such as `atexit`, `signal.signal`,
 | 4.2.3                      | Moved pull request template to correct location in .github folder. |
 | 4.2.4                      | Minor correction to readme. |
 | 4.3.0                      | Added memory barrier and minor additions to readme. |
+| 4.4.0                      | Add possibility to disable SIGINT and SIGTERM during shared memory allocation to prevent dangling shared memory. |
 
 ---
 <a name="todos"></a>
 <a id="todos"></a>
 ## ToDos
 
-- check if optional membar dependency is correctly shown in pypi header install command
-- (?) temporarily overwrite signal handlers during acquirement to prevent SIGINT/SIGTERM during acquirement
+- TBD

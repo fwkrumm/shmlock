@@ -102,4 +102,5 @@ class ShmLockConfig(): # pylint: disable=(too-many-instance-attributes)
              # long as the user does not share the lock via forking which is
              # STRONGLY DISCOURAGED!)
     memory_barrier: bool # whether to use memory barriers when accessing shared memory
+    block_signals: bool # whether to block signals when acquiring the lock
     description: str = "" # custom description
