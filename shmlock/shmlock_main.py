@@ -757,7 +757,8 @@ class ShmLock(ShmModuleBaseLogger):
 
     def ignore_signals(self, signum, frame): # pylint: disable=(unused-argument)
         """
-        function called as alias for SIGINT and SIGTERM if parameter set accordingly
+        function called as alias for signals (currently SIGINT and SIGTERM) if parameter
+        set accordingly
 
         Parameters
         ----------
@@ -766,7 +767,7 @@ class ShmLock(ShmModuleBaseLogger):
         _ : frame
             frame of signal
         """
-        self.info("ignoring signal %s SIGINT and SIGTERM for lock %s", signum, self)
+        self.info("ignoring signal %s for lock %s", signum, self)
 
     def add_exit_handlers(self,
                           register_atexit: bool = True,
