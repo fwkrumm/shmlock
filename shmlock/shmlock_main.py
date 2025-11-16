@@ -405,8 +405,8 @@ class ShmLock(ShmModuleBaseLogger):
                         self.debug("restored signal handler for signal %s after shared memory "\
                                 "creation", sig)
                     except Exception as err:
-                        msg = f"could not restore signal handler for signal {sig} on this platform. "\
-                            f"Exact error was {err}"
+                        msg = f"could not restore signal handler for signal {sig} on "\
+                              f"this platform. Exact error was {err}"
                         self.error(msg)
                         raise exceptions.ShmLockSignalOverwriteFailed(msg) from err
 
