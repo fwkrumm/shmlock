@@ -51,6 +51,7 @@ Thumbs.db
 # python install/build files
 build/*
 shmlock/shmlock.egg-info/*
+*.dist-info/
 
 # from notepad++
 *.bak

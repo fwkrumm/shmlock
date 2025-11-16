@@ -427,11 +427,11 @@ To ensure safe cleanup, consider alternatives such as `atexit`, `signal.signal`,
 | 4.2.3                      | Moved pull request template to correct location in .github folder. |
 | 4.2.4                      | Minor correction to readme. |
 | 4.3.0                      | Added memory barrier and minor additions to readme. |
+| 4.3.1                      | Verified and confirmed that optional membar dependency is correctly shown in PyPI metadata. |
 
 ---
 <a name="todos"></a>
 <a id="todos"></a>
 ## ToDos
 
-- check if optional membar dependency is correctly shown in pypi header install command
 - (?) temporarily overwrite signal handlers during acquirement to prevent SIGINT/SIGTERM during acquirement
