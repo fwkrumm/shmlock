@@ -525,8 +525,8 @@ class ShmLock(ShmModuleBaseLogger):
                            "acquire lock %s. The shared memory block is PROBABLY "\
                            "dangling since for %s times no uuid has been "\
                            "written to the block. A manual clean up might be required, "\
-                           "i.e. on Linux you could try to attach and unlink. "\
-                           "On Windows all handles need to be closed.",
+                           "i.e. on Linux you could try to attach and unlink or delete "\
+                           "the mmap file in /dev/shm. On Windows all handles need to be closed.",
                            self,
                            number_of_checks)
                 raise exceptions.ShmLockDanglingSharedMemoryError("Potential "\
