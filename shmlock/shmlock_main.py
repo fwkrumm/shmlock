@@ -831,9 +831,9 @@ class ShmLock(ShmModuleBaseLogger):
                 # only for windows systems which us necessary if a console is closed
                 def console_handler(ctrl_type):
                     if ctrl_type in (win32con.CTRL_C_EVENT,
-                                    win32con.CTRL_CLOSE_EVENT,
-                                    win32con.CTRL_LOGOFF_EVENT,
-                                    win32con.CTRL_SHUTDOWN_EVENT,):
+                                     win32con.CTRL_CLOSE_EVENT,
+                                     win32con.CTRL_LOGOFF_EVENT,
+                                     win32con.CTRL_SHUTDOWN_EVENT,):
                         self.release(force=True)
                         return True  # Prevent immediate termination if possible
                     return False  # Continue default behavior
