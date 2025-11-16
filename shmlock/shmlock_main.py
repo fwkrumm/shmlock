@@ -378,7 +378,7 @@ class ShmLock(ShmModuleBaseLogger):
                     self.debug("blocked signal %s during shared memory creation.", sig)
                 except Exception as err:
                     # signal cannot be caught/ignored on this platform
-                    msg = f"could not block signal {sig} on this platform"
+                    msg = f"could not block signal {sig} on this platform. Exact error was {err}"
                     self.error(msg)
                     raise exceptions.ShmLockSignalOverwriteFailed(msg) from err
 
@@ -403,7 +403,8 @@ class ShmLock(ShmModuleBaseLogger):
                     self.debug("restored signal handler for signal %s after shared memory "\
                                "creation", sig)
                 except Exception as err:
-                    msg = f"could not restore signal handler for signal {sig} on this platform"
+                    msg = f"could not restore signal handler for signal {sig} on this platform. "\
+                          f"Exact error was {err}"
                     self.error(msg)
                     raise exceptions.ShmLockSignalOverwriteFailed(msg) from err
 
