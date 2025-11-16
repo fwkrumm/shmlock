@@ -366,6 +366,8 @@ Please note that with Python version 3.13, there will be a "track" parameter for
 
 In short: Do not do that, there is always the risk for dangling shared memory. Make sure to release the lock properly. If this is not possible test with `add_exit_handlers(...)` function; cf. the text below.
 
+Starting from version 4.4.0, there is a parameter `block_signals` in the `ShmLock` constructor. If set to `True`, it will block `SIGINT` and `SIGTERM` signals during shared memory allocation to prevent dangling shared memory in case of abrupt process termination. Note that this will, depending on the platform, not work for process terminations.
+
 
 TLDR;
 
@@ -439,4 +441,4 @@ To ensure safe cleanup, consider alternatives such as `atexit`, `signal.signal`,
 <a id="todos"></a>
 ## ToDos
 
-- fix that optional parameter [membar] now shown on pypi page
+- TBD
