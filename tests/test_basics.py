@@ -355,5 +355,17 @@ class BasicsTest(unittest.TestCase):
             with lock:
                 lock.release()
 
+    def test_acquirement_with_signal_block(self):
+        """
+        test acquirement with signal blocking
+        """
+        shm_name = str(time.time())
+        lock = shmlock.ShmLock(shm_name, block_signals=True)
+
+        try:
+            self.assertTrue(lock.acquire())
+        finally:
+            lock.release()
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
