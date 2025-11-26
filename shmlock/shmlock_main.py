@@ -470,7 +470,7 @@ class ShmLock(ShmModuleBaseLogger):
         """
         # check if already acquired by this thread
         already_acquired = self._check_already_acquired()
-        if already_acquired is True:
+        if already_acquired:
             return already_acquired
 
         # setup signal blocking if needed
@@ -489,7 +489,8 @@ class ShmLock(ShmModuleBaseLogger):
         # created but not filled with the uuid data so it will be empty for a moment.
         # this is however not a problem since this is within the same process only used to
         # assure correct reentrant behavior. inter-process-wise this should only be used for
-        # debugging in case one has a deadlock and does not know which lock has acquired the lock.
+        # debugging in case one has a deadlock and does not know which lock acquired the
+        # shared memory.
         self._shm.shm.buf[:LOCK_SHM_SIZE] = self._config.uuid.uuid_bytes
 
         self.debug("lock %s acquired", self)
