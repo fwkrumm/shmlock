@@ -386,15 +386,15 @@ class ShmLock(ShmModuleBaseLogger):
             self.warning("signal %s received during shared memory creation for lock %s",
                          signum, self)
 
-        try:
-            for sig in [signal.SIGINT, signal.SIGTERM]:
-                old_signal_handlers[sig] = signal.getsignal(sig)
+        for sig in [signal.SIGINT, signal.SIGTERM]:
+            old_signal_handlers[sig] = signal.getsignal(sig)
+            try:
                 signal.signal(sig, signal_handler)
-        except Exception as err:  # pylint: disable=(broad-exception-caught)
-            msg = f"could not set signal handlers to block signals during shared memory " \
-                  f"creation for lock {self}: {err}"
-            self.error(msg)
-            raise exceptions.ShmLockSignalOverwriteFailed(msg) from err
+            except Exception as err:  # pylint: disable=(broad-exception-caught)
+                msg = f"could not set signal handlers to block signals during shared memory " \
+                    f"creation for lock {self}: {err}"
+                self.error(msg)
+                raise exceptions.ShmLockSignalOverwriteFailed(msg) from err
 
         return old_signal_handlers, signal_received
 
@@ -415,16 +415,16 @@ class ShmLock(ShmModuleBaseLogger):
             # nothing to do
             return
 
-        try:
-            for sig, handler in old_signal_handlers.items():
+        for sig, handler in old_signal_handlers.items():
+            try:
                 signal.signal(sig, handler)
                 self.debug("restored signal handler for signal %s after shared memory creation",
-                           sig)
-        except Exception as err:  # pylint: disable=(broad-exception-caught)
-            msg = f"could not restore signal handlers after shared memory " \
-                  f"creation for lock {self}: {err}"
-            self.error(msg)
-            raise exceptions.ShmLockSignalOverwriteFailed(msg) from err
+                            sig)
+            except Exception as err:  # pylint: disable=(broad-exception-caught)
+                msg = f"could not restore signal handlers after shared memory " \
+                    f"creation for lock {self}: {err}"
+                self.error(msg)
+                raise exceptions.ShmLockSignalOverwriteFailed(msg) from err
 
         if signal_received[0] is not None:
             self.warning("re-raising signal %s after shared memory creation for lock %s",
