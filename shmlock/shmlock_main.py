@@ -367,8 +367,8 @@ class ShmLock(ShmModuleBaseLogger):
                 f"this thread but uuid does not match (expected {self._config.uuid}, "\
                 f"got {self._shm.shm.buf[:LOCK_SHM_SIZE]}). This should not happen!")
 
-        old_signal_handlers = {}
-        signal_received = None
+        old_signal_handlers = {} # store old signal handlers here to restore them later
+        signal_received = None # store received signal here to re-raise it later
         if self._config.block_signals:
             # block signals during shared memory creation to prevent dangling shared memory
             # in case process is interrupted here
@@ -389,7 +389,7 @@ class ShmLock(ShmModuleBaseLogger):
                 self.warning("signal %s received during shared memory creation for lock %s",
                              signum,
                              self)
-
+            # store and overwrite signal handlers
             for sig in [signal.SIGINT, signal.SIGTERM]:
                 old_signal_handlers[sig] = signal.getsignal(sig)
                 signal.signal(sig, signal_handler)
@@ -408,22 +408,28 @@ class ShmLock(ShmModuleBaseLogger):
                                                           create=True,
                                                           size=LOCK_SHM_SIZE)
         finally:
-            if signal_received is not None:
-                # re-raise received signal after shared memory creation
-                self.warning("re-raising signal %s after shared memory creation for lock %s",
-                             signal_received,
-                             self)
-                signal.raise_signal(signal_received)
             if old_signal_handlers:
+
                 # restore old signal handlers
                 for sig, handler in old_signal_handlers.items():
                     signal.signal(sig, handler)
                     self.debug("restored signal handler for signal %s after shared memory "\
                                 "creation", sig)
 
+                if signal_received is not None:
+                    # re-raise received signal after shared memory creation
+                    # this only makes sense if we restored old signal handlers
+                    self.warning("re-raising signal %s after shared memory creation for lock %s",
+                                    signal_received,
+                                    self)
+                    signal.raise_signal(signal_received)
+
         # NOTE: shared memory is after creation(!) not filled with the uuid data in
-        # the same operation. so it MIGHT be possible that the shm block has been
-        # created but not filled with the uuid data so it would be empty.
+        # the same operation. so it is possible that the shm block has been
+        # created but not filled with the uuid data so it will be empty for a moment.
+        # this is however not a problem since this is within the same process only used to
+        # assure correct reentrant behavior. inter-process-wise this should only be used for
+        # debugging in case one has a deadlock and does not know which lock has acquired the lock.
         self._shm.shm.buf[:LOCK_SHM_SIZE] = self._config.uuid.uuid_bytes
 
         self.debug("lock %s acquired", self)
