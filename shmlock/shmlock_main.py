@@ -420,8 +420,8 @@ class ShmLock(ShmModuleBaseLogger):
                     # re-raise received signal after shared memory creation
                     # this only makes sense if we restored old signal handlers
                     self.warning("re-raising signal %s after shared memory creation for lock %s",
-                                    signal_received,
-                                    self)
+                                 signal_received,
+                                 self)
                     signal.raise_signal(signal_received)
 
         # NOTE: shared memory is after creation(!) not filled with the uuid data in
@@ -790,17 +790,17 @@ class ShmLock(ShmModuleBaseLogger):
         Parameters
         ----------
         register_atexit : bool, optional
-            register atexit handler to close the shared memory queue, by default True
+            register atexit handler to close the shared memory, by default True
         register_signal : bool, optional
-            register signal handlers to clean up the shared memory queue, by default True
+            register signal handlers to clean up the shared memory, by default True
             only for POSIX systems since it did not work as expected on Windows
         register_weakref : bool, optional
-            register weakref handler to clean up the shared memory queue, by default True
+            register weakref handler to clean up the shared memory, by default True
         register_console_handler : bool, optional
-            register console handler to clean up the shared memory queue, by default True
+            register console handler to clean up the shared memory, by default True
             only for Windows systems
         call_gc : bool, optional
-            call garbage collector to clean up the shared memory queue, by default True
+            call garbage collector to clean up the shared memory, by default True
         """
         if os.name == "posix" and register_signal:
 
