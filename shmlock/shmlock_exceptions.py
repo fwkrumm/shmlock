@@ -31,3 +31,9 @@ class ShmLockTimeoutError(ShmLockError):
     exception raised for timeout errors in the shmlock module.
     """
     pass # pylint: disable=(unnecessary-pass)
+
+class ShmLockSignalOverwriteFailed(ShmLockError):
+    """
+    exception raised if signal handlers could not be overwritten in the shmlock module.
+    """
+    pass # pylint: disable=(unnecessary-pass)

@@ -373,6 +373,9 @@ class ShmLock(ShmModuleBaseLogger):
             # block signals during shared memory creation to prevent dangling shared memory
             # in case process is interrupted here
 
+            # NOTE can we add a test for this? currently I do know know how to send a signal
+            # during shared memory creation in a reliable way
+
             def signal_handler(signum, frame): # pylint: disable=unused-argument
                 """
                 custom signal handler to catch signals during shared memory creation
@@ -381,7 +384,7 @@ class ShmLock(ShmModuleBaseLogger):
                 ----------
                 signum : int
                     signal number
-                frame : _any_
+                frame : _type_
                     current stack frame
                 """
                 nonlocal signal_received
@@ -390,11 +393,17 @@ class ShmLock(ShmModuleBaseLogger):
                              signum,
                              self)
             # store and overwrite signal handlers
-            for sig in [signal.SIGINT, signal.SIGTERM]:
-                # should we also add SIGHUP here?
-                old_signal_handlers[sig] = signal.getsignal(sig)
-                signal.signal(sig, signal_handler)
-
+            try:
+                for sig in [signal.SIGINT, signal.SIGTERM]:
+                    # should we also add SIGHUP here?
+                    old_signal_handlers[sig] = signal.getsignal(sig)
+                    signal.signal(sig, signal_handler)
+            except Exception as err: # pylint: disable=(broad-exception-caught)
+                # in case signals cannot be set (e.g. on some platforms) we just log the error
+                msg = "could not set signal handlers to block signals during shared memory "\
+                      f"creation for lock {self}: {err}"
+                self.error(msg)
+                raise exceptions.ShmLockSignalOverwriteFailed(msg) from err
         try:
             if self._config.track is not None:
                 # disable unexpected keyword argument warning because track parameter is only
@@ -412,10 +421,17 @@ class ShmLock(ShmModuleBaseLogger):
             if old_signal_handlers:
 
                 # restore old signal handlers
-                for sig, handler in old_signal_handlers.items():
-                    signal.signal(sig, handler)
-                    self.debug("restored signal handler for signal %s after shared memory "\
-                                "creation", sig)
+                try:
+                    for sig, handler in old_signal_handlers.items():
+                        signal.signal(sig, handler)
+                        self.debug("restored signal handler for signal %s after shared memory "\
+                                    "creation", sig)
+                except Exception as err: # pylint: disable=(broad-exception-caught)
+                    # in case signals cannot be set (e.g. on some platforms) we just log the error
+                    msg = "could not restore signal handlers after shared memory "\
+                          f"creation for lock {self}: {err}"
+                    self.error(msg)
+                    raise exceptions.ShmLockSignalOverwriteFailed(msg) from err
 
                 if signal_received is not None:
                     # re-raise received signal after shared memory creation
