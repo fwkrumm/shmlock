@@ -338,6 +338,120 @@ class ShmLock(ShmModuleBaseLogger):
             self.release() # make sure lock is released
             raise OSError(msg) from err
 
+    def _check_already_acquired(self):
+        """
+        check if lock is already acquired by this thread
+
+        Returns
+        -------
+        bool
+            True if already acquired, False otherwise
+
+        Raises
+        ------
+        exceptions.ShmLockRuntimeError
+            if uuid mismatch detected
+        """
+        if getattr(self._shm, "shm", None) is None:
+            return False
+
+        # this thread already acquired the lock
+        # check that the uuid matches (otherwise something is very wrong)
+        if self._shm.shm.buf[:LOCK_SHM_SIZE] == self._config.uuid.uuid_bytes:
+            self.debug("lock %s already acquired by this thread.", self)
+            return True
+
+        # uuid does not match but seemingly this thread has (somehow) acquired the lock
+        # this should not happen!
+        raise exceptions.ShmLockRuntimeError(
+            f"lock {self} seemingly already acquired by "
+            f"this thread but uuid does not match (expected {self._config.uuid}, "
+            f"got {self._shm.shm.buf[:LOCK_SHM_SIZE]}). This should not happen!")
+
+    def _setup_signal_blocking(self) -> tuple:
+        """
+        setup signal handlers to block signals during shared memory creation
+
+        Returns
+        -------
+        tuple
+            (old_signal_handlers dict, signal_received container as list)
+        """
+        old_signal_handlers = {}
+        signal_received = [None]  # Use list to allow modification in nested function
+
+        def signal_handler(signum, frame):  # pylint: disable=unused-argument
+            """Custom signal handler to catch signals during shared memory creation"""
+            signal_received[0] = signum
+            self.warning("signal %s received during shared memory creation for lock %s",
+                         signum, self)
+
+        try:
+            for sig in [signal.SIGINT, signal.SIGTERM]:
+                old_signal_handlers[sig] = signal.getsignal(sig)
+                signal.signal(sig, signal_handler)
+        except Exception as err:  # pylint: disable=(broad-exception-caught)
+            msg = f"could not set signal handlers to block signals during shared memory " \
+                  f"creation for lock {self}: {err}"
+            self.error(msg)
+            raise exceptions.ShmLockSignalOverwriteFailed(msg) from err
+
+        return old_signal_handlers, signal_received
+
+    def _restore_signal_handlers(self,
+                                 old_signal_handlers: dict,
+                                 signal_received: list) -> None:
+        """
+        restore old signal handlers and re-raise received signal if any
+
+        Parameters
+        ----------
+        old_signal_handlers : dict
+            Dictionary of signal handlers to restore
+        signal_received : list
+            Container with received signal number
+        """
+        if not old_signal_handlers:
+            # nothing to do
+            return
+
+        try:
+            for sig, handler in old_signal_handlers.items():
+                signal.signal(sig, handler)
+                self.debug("restored signal handler for signal %s after shared memory creation",
+                           sig)
+        except Exception as err:  # pylint: disable=(broad-exception-caught)
+            msg = f"could not restore signal handlers after shared memory " \
+                  f"creation for lock {self}: {err}"
+            self.error(msg)
+            raise exceptions.ShmLockSignalOverwriteFailed(msg) from err
+
+        if signal_received[0] is not None:
+            self.warning("re-raising signal %s after shared memory creation for lock %s",
+                         signal_received[0], self)
+            signal.raise_signal(signal_received[0])
+
+    def _create_shared_memory(self):
+        """
+        create the shared memory block
+
+        Returns
+        -------
+        shared_memory.SharedMemory
+            The created shared memory object
+        """
+        if self._config.track is not None:
+            return shared_memory.SharedMemory(  # pylint:disable=(unexpected-keyword-arg)
+                name=self._config.name,
+                create=True,
+                size=LOCK_SHM_SIZE,
+                track=self._config.track)
+
+        return shared_memory.SharedMemory(
+            name=self._config.name,
+            create=True,
+            size=LOCK_SHM_SIZE)
+
     def _create_or_fail(self):
         """
         create shared memory block i.e. successfully acquire lock
@@ -354,65 +468,29 @@ class ShmLock(ShmModuleBaseLogger):
         FileExistsError
             if shared memory block already exists i.e. the lock is already acquired
         """
-        if getattr(self._shm, "shm", None) is not None:
-            # this thread already acquired the lock
-            # check that the uuid matches (otherwise something is very wrong)
-            if self._shm.shm.buf[:LOCK_SHM_SIZE] == self._config.uuid.uuid_bytes:
-                self.debug("lock %s already acquired by this thread.",
-                           self)
-                return True
-            # uuid does not match but seemingly this thread has (somehow) acquired the lock
-            # this should not happen!
-            raise exceptions.ShmLockRuntimeError(f"lock {self} seemingly already acquired by "\
-                f"this thread but uuid does not match (expected {self._config.uuid}, "\
-                f"got {self._shm.shm.buf[:LOCK_SHM_SIZE]}). This should not happen!")
+        # check if already acquired by this thread
+        already_acquired = self._check_already_acquired()
+        if already_acquired:
+            return already_acquired
 
+        # setup signal blocking if needed
         old_signal_handlers = {}
+        signal_received = [None]
         if self._config.block_signals:
-            # block signals during shared memory creation to prevent dangling shared memory
-            # in case process is interrupted here
-
-            for sig in [signal.SIGINT, signal.SIGTERM]:
-                try:
-                    old_signal_handlers[sig] = signal.getsignal(sig)
-                    signal.signal(sig, self.ignore_signals)
-                    self.debug("blocked signal %s during shared memory creation.", sig)
-                except Exception as err:
-                    # signal cannot be caught/ignored on this platform
-                    msg = f"could not block signal {sig} on this platform. Exact error was {err}"
-                    self.error(msg)
-                    raise exceptions.ShmLockSignalOverwriteFailed(msg) from err
+            old_signal_handlers, signal_received = self._setup_signal_blocking()
 
         try:
-            if self._config.track is not None:
-                # disable unexpected keyword argument warning because track parameter is only
-                # supported for python >= 3.13. We check that in the constructor however
-                # pylint still reports it. There might be a better way to handle this?
-                self._shm.shm = shared_memory.SharedMemory(name=self._config.name, # pylint:disable=(unexpected-keyword-arg)
-                                                        create=True,
-                                                        size=LOCK_SHM_SIZE,
-                                                        track=self._config.track)
-            else:
-                self._shm.shm = shared_memory.SharedMemory(name=self._config.name,
-                                                        create=True,
-                                                        size=LOCK_SHM_SIZE)
+            self._shm.shm = self._create_shared_memory()
         finally:
-            if old_signal_handlers:
-                # restore old signal handlers
-                for sig, handler in old_signal_handlers.items():
-                    try:
-                        signal.signal(sig, handler)
-                        self.debug("restored signal handler for signal %s after shared memory "\
-                                "creation", sig)
-                    except Exception as err:
-                        msg = f"could not restore signal handler for signal {sig} on "\
-                              f"this platform. Exact error was {err}"
-                        self.error(msg)
-                        raise exceptions.ShmLockSignalOverwriteFailed(msg) from err
+            self._restore_signal_handlers(old_signal_handlers, signal_received)
 
         # NOTE: shared memory is after creation(!) not filled with the uuid data in
-        # the same operation. so it MIGHT be possible that the shm block has been
-        # created but not filled with the uuid data so it would be empty.
+        # the same operation. so it is possible that the shm block has been
+        # created but not filled with the uuid data so it will be empty for a moment.
+        # this is however not a problem since this is within the same process only used to
+        # assure correct reentrant behavior. inter-process-wise this should only be used for
+        # debugging in case one has a deadlock and does not know which lock acquired the
+        # shared memory.
         self._shm.shm.buf[:LOCK_SHM_SIZE] = self._config.uuid.uuid_bytes
 
         self.debug("lock %s acquired", self)
@@ -755,20 +833,6 @@ class ShmLock(ShmModuleBaseLogger):
             if shm is not None:
                 shm.close()
 
-    def ignore_signals(self, signum, frame): # pylint: disable=(unused-argument)
-        """
-        function called as alias for signals (currently SIGINT and SIGTERM) if parameter
-        set accordingly
-
-        Parameters
-        ----------
-        signum : int
-            number of signal
-        _ : frame
-            frame of signal
-        """
-        self.info("ignoring signal %s for lock %s", signum, self)
-
     def add_exit_handlers(self,
                           register_atexit: bool = True,
                           register_signal: bool = True,
@@ -787,17 +851,17 @@ class ShmLock(ShmModuleBaseLogger):
         Parameters
         ----------
         register_atexit : bool, optional
-            register atexit handler to close the shared memory queue, by default True
+            register atexit handler to close the shared memory, by default True
         register_signal : bool, optional
-            register signal handlers to clean up the shared memory queue, by default True
+            register signal handlers to clean up the shared memory, by default True
             only for POSIX systems since it did not work as expected on Windows
         register_weakref : bool, optional
-            register weakref handler to clean up the shared memory queue, by default True
+            register weakref handler to clean up the shared memory, by default True
         register_console_handler : bool, optional
-            register console handler to clean up the shared memory queue, by default True
+            register console handler to clean up the shared memory, by default True
             only for Windows systems
         call_gc : bool, optional
-            call garbage collector to clean up the shared memory queue, by default True
+            call garbage collector to clean up the shared memory, by default True
         """
         if os.name == "posix" and register_signal:
 
