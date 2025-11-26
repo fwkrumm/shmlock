@@ -391,6 +391,7 @@ class ShmLock(ShmModuleBaseLogger):
                              self)
             # store and overwrite signal handlers
             for sig in [signal.SIGINT, signal.SIGTERM]:
+                # should we also add SIGHUP here?
                 old_signal_handlers[sig] = signal.getsignal(sig)
                 signal.signal(sig, signal_handler)
 
