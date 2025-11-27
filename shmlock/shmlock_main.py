@@ -394,13 +394,13 @@ class ShmLock(ShmModuleBaseLogger):
                 msg = f"could not set signal handlers for signal {sig} to block signals during "\
                       f"shared memory creation for lock {self}: {err}"
                 self.error(msg)
-                # Restore all previously set signal handlers (best effort)
+                # restore all previously set signal handlers (best effort)
                 for prev_sig, prev_handler in old_signal_handlers.items():
                     if prev_handler is not None:
                         try:
                             signal.signal(prev_sig, prev_handler)
-                        except Exception:
-                            pass  # Best effort cleanup
+                        except Exception: # pylint: disable=(broad-exception-caught)
+                            pass  # prevent exception here
                 raise exceptions.ShmLockSignalOverwriteFailed(msg) from err
 
         return old_signal_handlers, signal_received
@@ -422,6 +422,8 @@ class ShmLock(ShmModuleBaseLogger):
             # nothing to do
             return
 
+        error_occurred = False
+
         for sig, handler in old_signal_handlers.items():
             if handler is None:
                 # this happens if lock is used within __del__ (should be avoided)
@@ -436,7 +438,14 @@ class ShmLock(ShmModuleBaseLogger):
                 msg = f"could not restore signal handlers after shared memory " \
                     f"creation for lock {self} and signal {sig}: {err}"
                 self.error(msg)
-                raise exceptions.ShmLockSignalOverwriteFailed(msg) from err
+                # continue loop to attempt to restore other signal handlers
+                error_occurred = True
+
+        if error_occurred:
+            # raise exception if any error occurred during restore
+            raise exceptions.ShmLockSignalOverwriteFailed(
+                "could not restore all signal handlers after shared memory creation "
+                f"for lock {self}")
 
         if signal_received[0] is not None:
             self.warning("re-raising signal %s after shared memory creation for lock %s",
