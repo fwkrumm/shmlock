@@ -394,8 +394,13 @@ class ShmLock(ShmModuleBaseLogger):
                 msg = f"could not set signal handlers for signal {sig} to block signals during "\
                       f"shared memory creation for lock {self}: {err}"
                 self.error(msg)
-                if old_signal_handlers[sig] is not None:
-                    signal.signal(sig, old_signal_handlers[sig])  # restore old handler
+                # Restore all previously set signal handlers (best effort)
+                for prev_sig, prev_handler in old_signal_handlers.items():
+                    if prev_handler is not None:
+                        try:
+                            signal.signal(prev_sig, prev_handler)
+                        except Exception:
+                            pass  # Best effort cleanup
                 raise exceptions.ShmLockSignalOverwriteFailed(msg) from err
 
         return old_signal_handlers, signal_received
