@@ -390,7 +390,7 @@ class ShmLock(ShmModuleBaseLogger):
             old_signal_handlers[sig] = signal.getsignal(sig)
             try:
                 signal.signal(sig, signal_handler)
-            except Exception as err:  # pylint: disable=(broad-exception-caught)
+            except Exception as err: # pylint: disable=(broad-exception-caught)
                 msg = f"could not set signal handlers for signal {sig} to block signals during "\
                       f"shared memory creation for lock {self}: {err}"
                 self.error(msg)
@@ -422,7 +422,7 @@ class ShmLock(ShmModuleBaseLogger):
             # nothing to do
             return
 
-        error_occurred = False
+        error_occurred = []
 
         for sig, handler in old_signal_handlers.items():
             if handler is None:
@@ -434,18 +434,18 @@ class ShmLock(ShmModuleBaseLogger):
                 signal.signal(sig, handler)
                 self.debug("restored signal handler for signal %s after shared memory creation",
                             sig)
-            except Exception as err:  # pylint: disable=(broad-exception-caught)
+            except Exception as err: # pylint: disable=(broad-exception-caught)
                 msg = f"could not restore signal handlers after shared memory " \
                     f"creation for lock {self} and signal {sig}: {err}"
                 self.error(msg)
                 # continue loop to attempt to restore other signal handlers
-                error_occurred = True
+                error_occurred.append(err)
 
         if error_occurred:
             # raise exception if any error occurred during restore
             raise exceptions.ShmLockSignalOverwriteFailed(
                 "could not restore all signal handlers after shared memory creation "
-                f"for lock {self}")
+                f"for lock {self}. The errors were: {error_occurred}")
 
         if signal_received[0] is not None:
             self.warning("re-raising signal %s after shared memory creation for lock %s",
