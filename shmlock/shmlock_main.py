@@ -386,15 +386,22 @@ class ShmLock(ShmModuleBaseLogger):
             self.warning("signal %s received during shared memory creation for lock %s",
                          signum, self)
 
-        try:
-            for sig in [signal.SIGINT, signal.SIGTERM]:
-                old_signal_handlers[sig] = signal.getsignal(sig)
+        for sig in [signal.SIGINT, signal.SIGTERM]:
+            old_signal_handlers[sig] = signal.getsignal(sig)
+            try:
                 signal.signal(sig, signal_handler)
-        except Exception as err:  # pylint: disable=(broad-exception-caught)
-            msg = f"could not set signal handlers to block signals during shared memory " \
-                  f"creation for lock {self}: {err}"
-            self.error(msg)
-            raise exceptions.ShmLockSignalOverwriteFailed(msg) from err
+            except Exception as err: # pylint: disable=(broad-exception-caught)
+                msg = f"could not set signal handlers for signal {sig} to block signals during "\
+                      f"shared memory creation for lock {self}: {err}"
+                self.error(msg)
+                # restore all previously set signal handlers (best effort)
+                for prev_sig, prev_handler in old_signal_handlers.items():
+                    if prev_handler is not None:
+                        try:
+                            signal.signal(prev_sig, prev_handler)
+                        except Exception: # pylint: disable=(broad-exception-caught)
+                            pass  # prevent exception here
+                raise exceptions.ShmLockSignalOverwriteFailed(msg) from err
 
         return old_signal_handlers, signal_received
 
@@ -415,16 +422,30 @@ class ShmLock(ShmModuleBaseLogger):
             # nothing to do
             return
 
-        try:
-            for sig, handler in old_signal_handlers.items():
+        error_occurred = []
+
+        for sig, handler in old_signal_handlers.items():
+            if handler is None:
+                # this happens if lock is used within __del__ (should be avoided)
+                self.debug("old signal handler for signal %s is None, "\
+                           "skipping restore for lock %s", sig, self)
+                continue
+            try:
                 signal.signal(sig, handler)
                 self.debug("restored signal handler for signal %s after shared memory creation",
-                           sig)
-        except Exception as err:  # pylint: disable=(broad-exception-caught)
-            msg = f"could not restore signal handlers after shared memory " \
-                  f"creation for lock {self}: {err}"
-            self.error(msg)
-            raise exceptions.ShmLockSignalOverwriteFailed(msg) from err
+                            sig)
+            except Exception as err: # pylint: disable=(broad-exception-caught)
+                msg = f"could not restore signal handlers after shared memory " \
+                    f"creation for lock {self} and signal {sig}: {err}"
+                self.error(msg)
+                # continue loop to attempt to restore other signal handlers
+                error_occurred.append(err)
+
+        if error_occurred:
+            # raise exception if any error occurred during restore
+            raise exceptions.ShmLockSignalOverwriteFailed(
+                "could not restore all signal handlers after shared memory creation "
+                f"for lock {self}. The errors were: {error_occurred}")
 
         if signal_received[0] is not None:
             self.warning("re-raising signal %s after shared memory creation for lock %s",
