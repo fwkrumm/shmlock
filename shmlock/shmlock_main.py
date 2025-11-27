@@ -391,8 +391,8 @@ class ShmLock(ShmModuleBaseLogger):
             try:
                 signal.signal(sig, signal_handler)
             except Exception as err:  # pylint: disable=(broad-exception-caught)
-                msg = f"could not set signal handlers to block signals during shared memory " \
-                    f"creation for lock {self}: {err}"
+                msg = f"could not set signal handlers for signal {sig} to block signals during "\
+                      f"shared memory creation for lock {self}: {err}"
                 self.error(msg)
                 raise exceptions.ShmLockSignalOverwriteFailed(msg) from err
 
@@ -416,13 +416,18 @@ class ShmLock(ShmModuleBaseLogger):
             return
 
         for sig, handler in old_signal_handlers.items():
+            if handler is None:
+                # this happens if lock is used within __del__ (should be avoided)
+                self.debug("old signal handler for signal %s is None, "\
+                           "skipping restore for lock %s", sig, self)
+                continue
             try:
                 signal.signal(sig, handler)
                 self.debug("restored signal handler for signal %s after shared memory creation",
                             sig)
             except Exception as err:  # pylint: disable=(broad-exception-caught)
                 msg = f"could not restore signal handlers after shared memory " \
-                    f"creation for lock {self}: {err}"
+                    f"creation for lock {self} and signal {sig}: {err}"
                 self.error(msg)
                 raise exceptions.ShmLockSignalOverwriteFailed(msg) from err
 
