@@ -707,7 +707,14 @@ class ShmLock(ShmModuleBaseLogger):
             raise exceptions.ShmLockRuntimeError(f"lock {self} is still acquired by this "\
                 "thread via contextmanager or __enter__ call.")
 
-        if getattr(self._shm, "shm", None) is not None:
+        try:
+            attribute = getattr(self._shm, "shm", None)
+        except AttributeError:
+            # if exception is thrown before _shm has been defined during __init__
+            # e.g. if invalid parameters are used
+            attribute = None
+
+        if attribute is not None:
             # only release if shared memory reference has been set and counter reached 0.
             # This prevents that release of nested with s: with s: with s: ... blocks.
             try:
