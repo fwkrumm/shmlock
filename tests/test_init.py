@@ -112,7 +112,7 @@ class InitTest(unittest.TestCase):
         shm_name = str(time.time())
 
         with self.assertRaises(TypeError):
-            shmlock.ShmLock(shm_name, unknown_param=1)
+            shmlock.ShmLock(shm_name, unknown_param=1) # pylint: disable=unexpected-keyword-arg
 
     def test_wrong_parameter_types(self):
         """
