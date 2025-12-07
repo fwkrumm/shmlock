@@ -437,6 +437,7 @@ To ensure safe cleanup, consider alternatives such as `atexit`, `signal.signal`,
 | 4.4.0                      | Add possibility to disable SIGINT and SIGTERM during shared memory allocation to prevent dangling shared memory. |
 | 4.4.1                      | Use static version for pymembar package and improve signal handling. |
 | 4.4.2                      | Improve exception handling. |
+| 4.4.3                      | Prevent attribute error in case of wrong parameters being passed (TypeError). |
 
 ---
 <a name="todos"></a>
