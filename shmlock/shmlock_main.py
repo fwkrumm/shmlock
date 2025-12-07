@@ -576,6 +576,8 @@ class ShmLock(ShmModuleBaseLogger):
 
         """
 
+        # NOTE that we do not catch an AttributeError here because this function is only used by
+        # the user after proper initialization of the lock instance.
         if getattr(self._shm, "shm", None) is not None:
             raise exceptions.ShmLockRuntimeError(f"Lock {self} is currently acquired. This "\
                 "function checks for dangling shared memory after shared memory creation had "\
@@ -707,7 +709,14 @@ class ShmLock(ShmModuleBaseLogger):
             raise exceptions.ShmLockRuntimeError(f"lock {self} is still acquired by this "\
                 "thread via contextmanager or __enter__ call.")
 
-        if getattr(self._shm, "shm", None) is not None:
+        try:
+            attribute = getattr(self._shm, "shm", None)
+        except AttributeError:
+            # Handle AttributeError from threading.local() attribute access in edge cases,
+            # e.g. if the "shm" attribute has not been set for the current thread.
+            attribute = None
+
+        if attribute is not None:
             # only release if shared memory reference has been set and counter reached 0.
             # This prevents that release of nested with s: with s: with s: ... blocks.
             try:
