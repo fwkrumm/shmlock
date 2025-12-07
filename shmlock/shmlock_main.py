@@ -576,6 +576,8 @@ class ShmLock(ShmModuleBaseLogger):
 
         """
 
+        # NOTE that we do not catch an AttributeError here because this function is only used by
+        # the user after proper initialization of the lock instance.
         if getattr(self._shm, "shm", None) is not None:
             raise exceptions.ShmLockRuntimeError(f"Lock {self} is currently acquired. This "\
                 "function checks for dangling shared memory after shared memory creation had "\
