@@ -105,6 +105,14 @@ class InitTest(unittest.TestCase):
         self.assertEqual(config.block_signals, True)
         self.assertEqual(config.description, "description")
 
+    def test_unknown_parameter(self):
+        """
+        test if unknown parameters are caught and TypeError is raised
+        """
+        shm_name = str(time.time())
+
+        with self.assertRaises(TypeError):
+            shmlock.ShmLock(shm_name, unknown_param=1)
 
     def test_wrong_parameter_types(self):
         """
