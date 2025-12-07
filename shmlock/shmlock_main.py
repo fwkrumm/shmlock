@@ -712,8 +712,8 @@ class ShmLock(ShmModuleBaseLogger):
         try:
             attribute = getattr(self._shm, "shm", None)
         except AttributeError:
-            # if exception is thrown before _shm has been defined during __init__
-            # e.g. if invalid parameters are used
+            # Handle AttributeError from threading.local() attribute access in edge cases,
+            # e.g. if the "shm" attribute has not been set for the current thread.
             attribute = None
 
         if attribute is not None:
