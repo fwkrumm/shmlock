@@ -437,6 +437,7 @@ To ensure safe cleanup, consider alternatives such as `atexit`, `signal.signal`,
 | 4.4.1                      | Use static version for pymembar package and improve signal handling. |
 | 4.4.2                      | Improve exception handling. |
 | 4.4.3                      | Prevent attribute error in case of wrong parameters being passed (correctly raise TypeError). |
+| 4.4.4                      | Minor improvements to README.md. |
 
 ---
 <a name="acknowledgments"></a>
