@@ -9,6 +9,7 @@
 - [Examples](#examples)
 - [Troubleshooting and Known Issues](#troubleshooting-and-known-issues)
 - [Version History](#version-history)
+- [Acknowledgments](#acknowledgments)
 - [ToDos](#todos)
 
 
@@ -436,6 +437,13 @@ To ensure safe cleanup, consider alternatives such as `atexit`, `signal.signal`,
 | 4.4.1                      | Use static version for pymembar package and improve signal handling. |
 | 4.4.2                      | Improve exception handling. |
 | 4.4.3                      | Prevent attribute error in case of wrong parameters being passed (correctly raise TypeError). |
+
+---
+<a name="acknowledgments"></a>
+<a id="acknowledgments"></a>
+## Acknowledgments
+
+This project has been refined and extended with the assistance of GitHub Copilot Agent powered by Claude Sonnet 4.5. The AI assistant has been instrumental in code refinement, documentation enhancement, and providing critical feedback throughout the development process.
 
 ---
 <a name="todos"></a>
