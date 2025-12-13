@@ -368,7 +368,7 @@ Please note that with Python version 3.13, there will be a "track" parameter for
 In short: Abrupt process termination carries the risk of dangling shared memory. Make sure to release the lock properly. If proper release is not possible, try the `add_exit_handlers(...)` function or use `block_signals=True`; see the text below for details.
 
 
-**TLDR:** Use `block_signals=True` when creating the lock to mitigate issues from abrupt process terminations during shared memory allocation.
+**TL;DR:** Use `block_signals=True` when creating the lock to mitigate issues from abrupt process terminations during shared memory allocation.
 
 One potential issue arises if a process is terminated (such as through a `KeyboardInterrupt`) during the creation of shared memory (i.e., inside `shared_memory.SharedMemory(...)`). On Linux, this can lead to problematic outcomes, such as the shared memory mmap file being created with a size of zero or a shared memory block being allocated without an object reference being returned. In such cases, neither `close()` nor `unlink()` can be properly called.
 
