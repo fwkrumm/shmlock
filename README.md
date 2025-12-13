@@ -90,7 +90,7 @@ import shmlock
 lock = shmlock.ShmLock("shm_lock")
 
 #
-# to apply the lock, use one of the following a), b), c)
+# to apply the lock, use one of the following: a), b), c)
 #
 
 # a)
@@ -121,7 +121,7 @@ with lock(timeout=1) as success:
         # your code
         pass
     else:
-        # lock could not be acquired after specified timeout
+        # lock could not be acquired after the specified timeout
         pass
 
 
@@ -148,7 +148,7 @@ print(lock.acquired)
 with lock:
     with lock:
         pass
-    # still locked, lock.release() would raise Exception unless force parameter is used
+    # still locked, lock.release() would raise an exception unless force parameter is used
 
 # create a logger (helper function)
 import logging
@@ -161,8 +161,8 @@ lock_with_membar = shmlock.ShmLock("shm_lock_membar", memory_barrier=True)
 
 # the following lock will block SIGINT and SIGTERM signals during shared memory allocation
 # to prevent dangling shared memory in case of abrupt process termination.
-# NOTE that this will, depending on the platform, not work for process terminations.
-lock_which_overwrites_signals = shmlock.ShmLock("shm_lock_signals", block_signals=True)
+# Note that this may not work for process terminations, depending on the platform.
+lock_which_blocks_signals = shmlock.ShmLock("shm_lock_signals", block_signals=True)
 ```
 
 ### Real-world Example
@@ -183,7 +183,7 @@ lock = shmlock.ShmLock("lock_name")
 with lock:
     # create (attach to) shared memory for synchronized access
     try:
-        shm = shared_memory.SharedMemory(name="shm_name", create=True, size=17) # buffer layout: 1 byte for the reference counter (to track usage), followed by 16 bytes for the UUID (a 128-bit unique identifier).
+        shm = shared_memory.SharedMemory(name="shm_name", create=True, size=17) # buffer layout: 1 byte for the reference counter (to track usage), followed by 16 bytes for the UUID (128-bit unique identifier)
     except FileExistsError:
         shm = shared_memory.SharedMemory(name="shm_name")
 
@@ -236,9 +236,7 @@ USE_LOCK = True
 
 Each instance will attempt to increment the value stored in a shared memory, the name of which is defined by `RESULT_SHM_NAME` in the file.
 
-If `USE_LOCK` is set to `True` (default), the lock is enabled, and the output should resemble the following (depending on the OS, and the chosen number of `RUNS` and `DELAY_FOR_LOCKS` in the example):
-
-If the latter is True (default) the lock is enabled and the output should be something like (depending on OS, and chosen number of `RUNS` and `DELAY_FOR_LOCKS` in the example)
+If `USE_LOCK` is set to `True` (default), the lock is enabled, and the output should resemble the following (depending on the OS and the chosen number of `RUNS` and `DELAY_FOR_LOCKS` in the example):
 
 ![multiple_ok](./docs/assets/example_multiple_ok.png)
 
@@ -364,14 +362,14 @@ Please note that with Python version 3.13, there will be a "track" parameter for
 
 ### Process Interrupt (SIGINT/SIGTERM)
 
-In short: Do not do that, there is always the risk for dangling shared memory. Make sure to release the lock properly. If this is not possible test with `add_exit_handlers(...)` function; cf. the text below.
+**Important:** Starting from version 4.4.0, there is a `block_signals` parameter in the `ShmLock` constructor. If set to `True`, it will block `SIGINT` and `SIGTERM` signals during the critical shared memory allocation phase to prevent dangling shared memory in case of abrupt process termination. Note that this may not work for all process terminations, depending on the platform. This is the recommended approach when process interruptions are a concern.
 
-Starting from version 4.4.0, there is a parameter `block_signals` in the `ShmLock` constructor. If set to `True`, it will block `SIGINT` and `SIGTERM` signals during shared memory allocation to prevent dangling shared memory in case of abrupt process termination. Note that this will, depending on the platform, not work for process terminations.
+In short: Abrupt process termination carries the risk of dangling shared memory. Make sure to release the lock properly. If proper release is not possible, try the `add_exit_handlers(...)` function or use `block_signals=True`; see the text below for details.
 
 
-TLDR;
+**TLDR:** Use `block_signals=True` when creating the lock to mitigate issues from abrupt process terminations during shared memory allocation.
 
-One potential issue arises if a process is terminated (such as through a `KeyboardInterrupt`) during the creation of shared memory (i.e., inside `shared_memory.SharedMemory(...)`). On Linux, this can lead to unintended outcomes, such as the shared memory mmap file being created with a size of zero or a shared memory block being allocated without an object reference being returned. In such cases, neither `close()` nor `unlink()` can be properly called.
+One potential issue arises if a process is terminated (such as through a `KeyboardInterrupt`) during the creation of shared memory (i.e., inside `shared_memory.SharedMemory(...)`). On Linux, this can lead to problematic outcomes, such as the shared memory mmap file being created with a size of zero or a shared memory block being allocated without an object reference being returned. In such cases, neither `close()` nor `unlink()` can be properly called.
 
 Since detecting this scenario is not trivial, the function `query_for_error_after_interrupt(...)` helps to handle such cases:
 
@@ -391,7 +389,7 @@ In case you expect the process being terminated abruptly, you can use the follow
 ```python
 s = shmlock.ShmLock("lock_name")
 
-# the following functions will (depending on parameters) register cleanup via atexit module (nt and posix), via signal module (for SIGINT, SIGTERM and SIGHUP; posix only), we weakref.finalize (nt and posix) and via win32api (console handler, nt only) and trigger garbage collection, respectively.
+# the following function will (depending on parameters) register cleanup via atexit module (nt and posix), via signal module (for SIGINT, SIGTERM and SIGHUP; posix only), via weakref.finalize (nt and posix) and via win32api (console handler, nt only) and trigger garbage collection, respectively.
 s.add_exit_handlers(register_atexit = True,
                     register_signal = True,
                     register_weakref = True,
