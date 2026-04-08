@@ -3,7 +3,7 @@ name: Weekly Latest Python Check
 on:
   schedule:
     # - cron: '0 12 * * 1' # Every Monday at 12:00 UTC
-    - cron: '30 22 * * 3'  # Every Wednesday 22:30 UTC (testing)
+    - cron: '15 22 * * 3'  # Every Wednesday 22:15 UTC (testing)
 
 # Limit GITHUB_TOKEN permissions
 permissions:
