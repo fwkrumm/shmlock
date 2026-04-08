@@ -1,6 +1,12 @@
-name: CI_ShmLock
+name: Weekly Latest Python Check
 
-on: [push, pull_request]
+on:
+  schedule:
+    - cron: '0 12 * * 1' # Every Monday at 12:00 UTC
+
+concurrency:
+  group: weekly-latest-python
+  cancel-in-progress: true
 
 # Limit GITHUB_TOKEN permissions
 permissions:
@@ -8,18 +14,17 @@ permissions:
 
 jobs:
   Unittests:
-    # run unit tests (some are already integration tests)
+    # run unit tests against the most recent Python version available
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest, ubuntu-22.04-arm, ubuntu-24.04-arm]
-        python-version: [3.10.*, 3.11.*, 3.12.*, 3.13.*, 3.14.*, 3.x]
     steps:
       - uses: actions/checkout@v6
-      - name: Python unit testing
+      - name: Set up latest Python
         uses: actions/setup-python@v6
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: '3.x'
       - name: Install dependencies
         run: |
           pip install --upgrade pip
@@ -31,18 +36,17 @@ jobs:
           coverage report -m
 
   Examples:
-    # run examples from ./examples folder
+    # run examples from ./examples folder against the most recent Python version available
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest, ubuntu-22.04-arm, ubuntu-24.04-arm]
-        python-version: [3.10.*, 3.11.*, 3.12.*, 3.13.*, 3.14.*, 3.x]
     steps:
       - uses: actions/checkout@v6
-      - name: Python example execution
+      - name: Set up latest Python
         uses: actions/setup-python@v6
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: '3.x'
       - name: Upgrade pip
         run: pip install --upgrade pip
       - name: Install Windows-specific requirements
@@ -59,14 +63,14 @@ jobs:
           python ./examples/performance_analysis/run_poll_perf.py
 
   Pylint:
-    # run pylint on source code and examples (only for linux and python 3.14.*)
+    # run pylint against the most recent Python version available
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - name: Set up Python 3.14.*
+      - name: Set up latest Python
         uses: actions/setup-python@v6
         with:
-          python-version: 3.14.*
+          python-version: '3.x'
       - name: Install dependencies
         run: |
           pip install --upgrade pip

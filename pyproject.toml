@@ -9,12 +9,17 @@ description = "This module provides an inter-process lock implementation, elimin
 long_description = "file: README.md"
 long_description_content_type = "text/markdown"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 authors = [
     { name = "Fabian Krumm", email = "ghub_fk@gmx.de" },
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "License :: OSI Approved :: BSD License",
     "Operating System :: OS Independent"
 ]
