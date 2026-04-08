@@ -2,8 +2,7 @@ name: Weekly Latest Python Check
 
 on:
   schedule:
-    # - cron: '0 12 * * 1' # Every Monday at 12:00 UTC
-    - cron: '15 22 * * 3'  # Every Wednesday 22:15 UTC (testing)
+    - cron: '0 12 * * 1' # Every Monday at 12:00 UTC
 
 # Limit GITHUB_TOKEN permissions
 permissions:
@@ -17,9 +16,9 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest, ubuntu-22.04-arm, ubuntu-24.04-arm]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Set up latest Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.x'
       - name: Install dependencies
@@ -39,9 +38,9 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest, ubuntu-22.04-arm, ubuntu-24.04-arm]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Set up latest Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.x'
       - name: Upgrade pip
@@ -63,9 +62,9 @@ jobs:
     # run pylint against the most recent Python version available
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Set up latest Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.x'
       - name: Install dependencies
