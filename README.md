@@ -438,6 +438,7 @@ To ensure safe cleanup, consider alternatives such as `atexit`, `signal.signal`,
 | 4.4.2                      | Improve exception handling. |
 | 4.4.3                      | Prevent attribute error in case of wrong parameters being passed (correctly raise TypeError). |
 | 4.4.4                      | Minor improvements to README.md. |
+| 5.0.0                      | Dropped support for Python 3.8 and 3.9 (both EOL). Minimum required version is now Python 3.10. Updated CI workflows. |
 
 ---
 <a name="acknowledgments"></a>
