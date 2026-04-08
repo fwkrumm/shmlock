@@ -1,8 +1,6 @@
 name: Weekly Latest Python Check
 
 on:
-  push:  # temporary: remove after testing
-  workflow_dispatch:  # allows manual triggering from the Actions tab (any branch)
   schedule:
     - cron: '0 12 * * 1' # Every Monday at 12:00 UTC
 
