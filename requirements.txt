@@ -1,7 +1,7 @@
 # Note that none of these dependencies are required for lock functionality itself, but only for running tests and examples.
 pylint>3,<4
 filelock>3,<4
-pyzmq>26,<27
+pyzmq>26,<28
 coverage>7,<8
 # optional for color logs
 coloredlogs>15,<16
