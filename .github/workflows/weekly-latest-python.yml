@@ -1,9 +1,10 @@
 name: Weekly Latest Python Check
 
-on:
-  schedule:
-    - cron: '0 12 * * 1' # Every Monday at 12:00 UTC
-  workflow_dispatch: # Allow manual triggering
+on: [push, pull_request]
+#on:
+#  schedule:
+#    - cron: '0 12 * * 1' # Every Monday at 12:00 UTC
+#  workflow_dispatch: # Allow manual triggering
 
 concurrency:
   group: weekly-latest-python
