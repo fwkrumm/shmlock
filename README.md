@@ -452,4 +452,4 @@ This project has been refined and extended with the assistance of GitHub Copilot
 <a id="todos"></a>
 ## ToDos
 
-- TBD
+- split requirements.txt properly to package requirements, dev requirements, etc.

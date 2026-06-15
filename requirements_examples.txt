@@ -1,2 +1,0 @@
-# Dependencies required for running the examples (not needed for tests).
-pyzmq>=26

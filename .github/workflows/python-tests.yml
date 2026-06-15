@@ -53,7 +53,6 @@ jobs:
         run: |
           pip install . -r requirements.txt
           pip install -r requirements-optional.txt
-          pip install -r requirements_examples.txt
       - name: Run Examples from installed package
         run: |
           python ./examples/performance_analysis/run_perf.py
@@ -73,7 +72,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install -r requirements-optional.txt
-          pip install -r requirements_examples.txt
       - name: Run pylint
         run: |
           pylint --rcfile=.pylintrc tests

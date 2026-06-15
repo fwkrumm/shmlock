@@ -1,9 +1,10 @@
 name: Weekly Latest Python Check
 
-on:
-  schedule:
-    - cron: '0 12 * * 1' # Every Monday at 12:00 UTC
-  workflow_dispatch: # Allow manual triggering
+on: [push, pull_request]
+#on:
+#  schedule:
+#    - cron: '0 12 * * 1' # Every Monday at 12:00 UTC
+#  workflow_dispatch: # Allow manual triggering
 
 concurrency:
   group: weekly-latest-python
@@ -58,7 +59,6 @@ jobs:
         run: |
           pip install . -r requirements.txt
           pip install -r requirements-optional.txt
-          pip install -r requirements_examples.txt
       - name: Run Examples from installed package
         run: |
           python ./examples/performance_analysis/run_perf.py
@@ -78,7 +78,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install -r requirements-optional.txt
-          pip install -r requirements_examples.txt
       - name: Run pylint
         run: |
           pylint --rcfile=.pylintrc tests
