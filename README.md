@@ -439,6 +439,7 @@ To ensure safe cleanup, consider alternatives such as `atexit`, `signal.signal`,
 | 4.4.3                      | Prevent attribute error in case of wrong parameters being passed (correctly raise TypeError). |
 | 4.4.4                      | Minor improvements to README.md. |
 | 5.0.0                      | Dropped support for Python 3.8 and 3.9 (both EOL). Minimum required version is now Python 3.10. Updated CI workflows. |
+| 5.0.1                      | update pemymbar version to support general python 3 versions. |
 
 ---
 <a name="acknowledgments"></a>
