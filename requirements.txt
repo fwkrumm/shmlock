@@ -1,5 +1,5 @@
 # Note that none of these dependencies are required for lock functionality itself, but only for running tests and examples.
-pylint>3,<4
+pylint>4,<5
 filelock>3,<4
 pyzmq>26,<28
 coverage>7,<8
