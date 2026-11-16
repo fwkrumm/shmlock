@@ -115,24 +115,24 @@ if __name__ == "__main__":
                 getattr(log, key)(val)
 
     START_EVENT = multiprocessing.Event()
-    RESULT = None
+    result_shm = None
     try:
-        RESULT = shared_memory.SharedMemory(name=RESULT_SHM_NAME, create=True, size=8)
+        result_shm = shared_memory.SharedMemory(name=RESULT_SHM_NAME, create=True, size=8)
         LOCK_NAME = "test_lock" # use the same lock for all processes
         server_proc = None
 
         for INTERVAL in (0.0005, 0.01, 0.04, 0.05, 0.1): # 0.05 default at the moment
             log.info("Running poll interval %f", INTERVAL)
-            RESULT.buf[:] = bytearray(len(RESULT.buf[:]) * [0])
+            result_shm.buf[:] = bytearray(len(result_shm.buf[:]) * [0])
 
             # queue to collect results
-            TIME_MEASUREMENT_QUEUE = multiprocessing.Queue()
+            time_measurement_queue = multiprocessing.Queue()
             for i in range(NUM_PROCESSES):
                 proc = multiprocessing.Process(target=worker_interval,
                                                args=(INTERVAL,
                                                      LOCK_NAME,
                                                      START_EVENT,
-                                                     TIME_MEASUREMENT_QUEUE,))
+                                                     time_measurement_queue,))
                 procs.append(proc)
                 proc.start()
 
@@ -143,7 +143,7 @@ if __name__ == "__main__":
             time_measures = []
             # NOTE that this blocks until all processes have finished
             for _ in range(NUM_PROCESSES):
-                time_measures.extend(TIME_MEASUREMENT_QUEUE.get())
+                time_measures.extend(time_measurement_queue.get())
 
             for proc in procs:
                 proc: multiprocessing.Process
@@ -157,7 +157,7 @@ if __name__ == "__main__":
             variance = sum((x - mean) ** 2 for x in time_measures) / len(time_measures)
             standard_deviation = variance ** 0.5
 
-            final_res = struct.unpack_from("Q", RESULT.buf, 0)[0]
+            final_res = struct.unpack_from("Q", result_shm.buf, 0)[0]
 
             assert final_res == NUM_PROCESSES*NUM_RUNS,\
                 "lock failed! this should never happen. expected result "\
@@ -171,6 +171,6 @@ if __name__ == "__main__":
             log.info("standard deviation: %fs\n\n", standard_deviation)
 
     finally:
-        if RESULT is not None:
-            RESULT.close()
-            RESULT.unlink()
+        if result_shm is not None:
+            result_shm.close()
+            result_shm.unlink()

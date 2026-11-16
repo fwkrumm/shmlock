@@ -57,3 +57,6 @@ shmlock/shmlock.egg-info/*
 *.bak
 
 .coverage
+
+# should we ignore this?
+uv.lock

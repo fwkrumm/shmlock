@@ -7,7 +7,7 @@ you do not need to time the startup, each script will check the current shm valu
 incremented at start up.
 
 if the script finishes to quickly, you can increase the number of runs (RUNS) or
-the delay for locks (DELAY_FOR_LOCKS) below
+the delay for locks (delay_for_locks) below
 
 to test the lock mechanism, set USE_LOCK to True, otherwise it will run without locks.
 if you set USE_LOCK=False you will get assertion errors in a non-deterministic manner because of
@@ -43,11 +43,11 @@ LOCK_NAME = "lock_shared_memory"
 RESULT_SHM_NAME = "result_shared_memory"
 
 RUNS = 10000
-DELAY_FOR_LOCKS = 0 # used to "fake" delay to simulate some work
+delay_for_locks = 0 # used to "fake" delay to simulate some work
 
 if not USE_LOCK:
     # extend run time so that the script does not finish too quickly
-    DELAY_FOR_LOCKS = 0.01
+    delay_for_locks = 0.01
 
 if __name__ == "__main__":
 
@@ -68,8 +68,8 @@ if __name__ == "__main__":
         def run():
             """simple run function to increment the value within shared memory"""
             current_value = struct.unpack_from("Q", result.buf, 0)[0]
-            if DELAY_FOR_LOCKS:
-                time.sleep(DELAY_FOR_LOCKS)
+            if delay_for_locks:
+                time.sleep(delay_for_locks)
             struct.pack_into("Q", result.buf, 0, current_value + 1)
 
             check_buf = struct.unpack_from("Q", result.buf, 0)[0]

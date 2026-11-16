@@ -263,9 +263,9 @@ if __name__ == "__main__":
     START_EVENT = multiprocessing.Event()
 
     # NOTE that if this script is cancelled, the shared memory will not be freed
-    RESULT = None
+    result_shm = None
     try:
-        RESULT = shared_memory.SharedMemory(name=RESULT_SHM_NAME, create=True, size=8)
+        result_shm = shared_memory.SharedMemory(name=RESULT_SHM_NAME, create=True, size=8)
         LOCK_NAME = "test_lock" # use the same lock for all processes
         server_proc = None
 
@@ -277,7 +277,7 @@ if __name__ == "__main__":
 
             log.info("Running test type %s", TEST_TYPE)
 
-            RESULT.buf[:] = bytearray(len(RESULT.buf[:]) * [0])
+            result_shm.buf[:] = bytearray(len(result_shm.buf[:]) * [0])
 
             if TEST_TYPE == "zmq":
                 # zmq requires a server process, make daemon so that it gets destroyed
@@ -291,13 +291,13 @@ if __name__ == "__main__":
                     continue # continue with other tests nevertheless
 
             # queue to collect results
-            TIME_MEASUREMENT_QUEUE = multiprocessing.Queue()
+            time_measurement_queue = multiprocessing.Queue()
             for i in range(NUM_PROCESSES):
                 proc = multiprocessing.Process(target=worker_different_locks,
                                                args=(TEST_TYPE,
                                                      LOCK_NAME,
                                                      START_EVENT,
-                                                     TIME_MEASUREMENT_QUEUE,))
+                                                     time_measurement_queue,))
                 procs.append(proc)
                 proc.start()
 
@@ -308,7 +308,7 @@ if __name__ == "__main__":
             time_measures = []
             # NOTE that this blocks until all processes have finished
             for _ in range(NUM_PROCESSES):
-                time_measures.extend(TIME_MEASUREMENT_QUEUE.get())
+                time_measures.extend(time_measurement_queue.get())
 
             for proc in procs:
                 proc: multiprocessing.Process
@@ -322,7 +322,7 @@ if __name__ == "__main__":
             variance = sum((x - mean) ** 2 for x in time_measures) / len(time_measures)
             standard_deviation = variance ** 0.5
 
-            final_res = struct.unpack_from("Q", RESULT.buf, 0)[0]
+            final_res = struct.unpack_from("Q", result_shm.buf, 0)[0]
 
             # print results
             log.info("Test type %s:", TEST_TYPE)
@@ -344,9 +344,9 @@ if __name__ == "__main__":
                     "lock failed! this should never happen. expected result "\
                     f"{NUM_PROCESSES*NUM_RUNS} != actual result {final_res}"
     finally:
-        if RESULT is not None:
-            RESULT.close()
-            RESULT.unlink()
+        if result_shm is not None:
+            result_shm.close()
+            result_shm.unlink()
 
     # for some reason sometimes filelock artifacts remain
     try:
