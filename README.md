@@ -237,7 +237,7 @@ USE_LOCK = True
 
 Each instance will attempt to increment the value stored in a shared memory, the name of which is defined by `RESULT_SHM_NAME` in the file.
 
-If `USE_LOCK` is set to `True` (default), the lock is enabled, and the output should resemble the following (depending on the OS and the chosen number of `RUNS` and `DELAY_FOR_LOCKS` in the example):
+If `USE_LOCK` is set to `True` (default), the lock is enabled, and the output should resemble the following (depending on the OS and the chosen number of `RUNS` and `delay_for_locks` in the example):
 
 ![multiple_ok](./docs/assets/example_multiple_ok.png)
 
